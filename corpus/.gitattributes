@@ -1,0 +1,7 @@
+# MIB files are test input: keep their bytes exactly as upstream ships them
+# (some use CRLF), so checksums and line/column diagnostics stay stable.
+* -text
+*.md text
+*.sh text eol=lf
+manifest.tsv text eol=lf
+.git* text eol=lf
