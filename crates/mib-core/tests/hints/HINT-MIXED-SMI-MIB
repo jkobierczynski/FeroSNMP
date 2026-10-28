@@ -1,0 +1,34 @@
+-- An SMIv2 module (it has a MODULE-IDENTITY) with an SMIv1 TRAP-TYPE. The
+-- mix makes the SMI version unknown to mib-rs, which then skips its version
+-- checks; FeroSNMP's own check reports the SMIv1 parts.
+HINT-MIXED-SMI-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises
+        FROM SNMPv2-SMI
+    TRAP-TYPE
+        FROM RFC-1215;
+
+hintMixedMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Mixes SMIv1 into SMIv2."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99997 }
+
+oldAccess OBJECT-TYPE
+    SYNTAX      INTEGER (0..100)
+    ACCESS      read-only
+    STATUS      mandatory
+    DESCRIPTION "Uses ACCESS and STATUS mandatory, which are SMIv1."
+    ::= { hintMixedMib 1 }
+
+oldTrap TRAP-TYPE
+    ENTERPRISE  hintMixedMib
+    VARIABLES   { oldAccess }
+    DESCRIPTION "A TRAP-TYPE in an SMIv2 module."
+    ::= 1
+
+END

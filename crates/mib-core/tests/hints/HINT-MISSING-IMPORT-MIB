@@ -1,0 +1,38 @@
+-- Uses HintLevel, DisplayString and hintObjects without importing them.
+HINT-MISSING-IMPORT-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises
+        FROM SNMPv2-SMI;
+
+hintMissingImportMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Forgets to import what it uses."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99991 }
+
+missingLevel OBJECT-TYPE
+    SYNTAX      HintLevel
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Uses a textual convention that is not imported."
+    ::= { hintMissingImportMib 1 }
+
+missingName OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Uses DisplayString without importing it from SNMPv2-TC."
+    ::= { hintMissingImportMib 2 }
+
+missingParent OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Hangs off a node from another module that is not imported."
+    ::= { hintObjects 9 }
+
+END

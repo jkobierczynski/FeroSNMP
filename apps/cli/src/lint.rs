@@ -69,6 +69,8 @@ struct Finding {
     /// Line, column, end line and end column, when the problem points at text.
     position: Option<(u32, u32, u32, u32)>,
     message: String,
+    /// How to fix it, when known.
+    hint: Option<String>,
 }
 
 impl From<Diagnostic> for Finding {
@@ -87,6 +89,7 @@ impl From<Diagnostic> for Finding {
             file,
             position,
             message: diagnostic.message,
+            hint: diagnostic.hint,
         }
     }
 }
@@ -193,6 +196,11 @@ pub fn run(options: &Options, out: &mut impl Write) -> Result<Status, CliError> 
                     "module {} is also defined in {used}, which is loaded instead of this file",
                     entry.module
                 ),
+                hint: Some(
+                    "Remove one of the two files, or move this one to a folder \
+                     that is not searched."
+                        .to_string(),
+                ),
             });
         } else {
             modules.insert(entry.module.clone());
@@ -252,6 +260,7 @@ fn missing_modules(targets: &Targets, files_with_modules: &HashSet<PathBuf>) -> 
                           `NAME DEFINITIONS ::= BEGIN` line, and have no \
                           extension or end in .mib, .smi, .txt or .my"
                     .to_string(),
+                hint: None,
             });
         }
     }
@@ -264,6 +273,7 @@ fn missing_modules(targets: &Targets, files_with_modules: &HashSet<PathBuf>) -> 
                 file: Some(folder.clone()),
                 position: None,
                 message: "no MIB modules found in this folder".to_string(),
+                hint: None,
             });
         }
     }
@@ -301,6 +311,9 @@ fn write_text(findings: &[Finding], modules: usize, out: &mut impl Write) -> std
             write!(out, "{module}: ")?;
         }
         writeln!(out, "{} [{}]", finding.message, finding.code)?;
+        if let Some(hint) = &finding.hint {
+            writeln!(out, "    hint: {hint}")?;
+        }
     }
 
     let errors = findings.iter().filter(|f| f.severity.is_error()).count();
@@ -329,12 +342,12 @@ fn plural<'a>(count: usize, one: &'a str, many: &'a str) -> &'a str {
 ///     { "severity": "error", "code": "import-module-not-found",
 ///       "module": "BFD-STD-MIB", "file": "corpus/ietf/BFD-STD-MIB",
 ///       "line": 14, "column": 6, "end_line": 14, "end_column": 26,
-///       "message": "..." }
+///       "message": "...", "hint": "..." }
 ///   ]
 /// }
 /// ```
 ///
-/// `module`, `file` and the positions are `null` when not known. "errors"
+/// `module`, `file`, the positions and `hint` are `null` when not known. "errors"
 /// counts fatal, severe and error; "warnings" everything else.
 fn write_json(
     findings: &[Finding],
@@ -359,6 +372,7 @@ fn write_json(
                 "end_line": end_line,
                 "end_column": end_column,
                 "message": f.message,
+                "hint": f.hint,
             })
         })
         .collect();

@@ -121,7 +121,9 @@ impl MibLibrary {
         }
     }
 
-    /// Add a folder to search, after the folders added before it.
+    /// Add a folder to search, after the folders added before it. A single
+    /// MIB file may be given instead of a folder; it is used whatever its
+    /// extension.
     pub fn with_folder(mut self, folder: impl Into<PathBuf>) -> Self {
         self.folders.push(folder.into());
         self
@@ -238,7 +240,12 @@ impl MibLibrary {
             loader = loader.modules(modules.iter().copied());
         }
         let mib = loader.load().map_err(load_error)?;
-        Ok(MibSet::new(mib, self.strictness))
+        let folders: Vec<PathBuf> = self
+            .search_folders()
+            .into_iter()
+            .map(|(folder, _)| folder)
+            .collect();
+        Ok(MibSet::new(mib, self.strictness, &folders))
     }
 }
 
@@ -258,17 +265,22 @@ pub fn load_module_text(
         .diagnostic_config(strictness.diagnostic_config())
         .load()
         .map_err(load_error)?;
-    Ok(MibSet::new(mib, strictness))
+    Ok(MibSet::new(mib, strictness, &[]))
 }
 
-/// Open a folder as an mib-rs source. A user folder that cannot be read is an
-/// error; a system folder that cannot be read is skipped (`Ok(None)`), as the
-/// user did not ask for it.
+/// Open a folder (or a single file) as an mib-rs source. A user folder that
+/// cannot be read is an error; a system folder that cannot be read is skipped
+/// (`Ok(None)`), as the user did not ask for it.
 fn open_folder(
     folder: &Path,
     kind: SourceKind,
 ) -> Result<Option<Box<dyn mib_rs::Source>>, LoadError> {
-    match (mib_rs::source::dir(folder), kind) {
+    let source = if folder.is_file() {
+        mib_rs::source::file(folder)
+    } else {
+        mib_rs::source::dir(folder)
+    };
+    match (source, kind) {
         (Ok(source), _) => Ok(Some(source)),
         (Err(_), SourceKind::SystemFolder) => Ok(None),
         (Err(source), SourceKind::UserFolder) => Err(LoadError::Folder {

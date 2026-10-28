@@ -18,7 +18,11 @@
 //!   status, units, enums, ranges and INDEX.
 //! - [`MibSet::search`] finds nodes by name with `*` and `?` wildcards.
 //! - Problems in the MIB files are collected as [`Diagnostic`]s with file,
-//!   line and column instead of stopping the load.
+//!   line and column instead of stopping the load, most with a concrete fix
+//!   hint.
+//! - [`MibSet::trace`] explains how a name resolves, or why it does not.
+//! - [`SourceView`] is the text of a MIB file split into classified tokens,
+//!   for showing the place a diagnostic points at.
 //!
 //! # Example
 //!
@@ -46,10 +50,13 @@ mod convert;
 mod details;
 mod diagnostic;
 mod error;
+mod hints;
 mod library;
 mod oid;
 mod pattern;
 mod set;
+mod source;
+mod trace;
 
 pub use details::{
     Access, BaseType, IndexPart, NamedNumber, NodeDetails, NodeKind, Range, RangeBound, Status,
@@ -61,6 +68,11 @@ pub use library::{MibLibrary, ModuleFile, SourceKind, Strictness, load_module_te
 pub use oid::{Oid, ParseOidError};
 pub use pattern::Pattern;
 pub use set::{InstanceLookup, MibSet, ModuleInfo, Node, NodeId, SmiVersion};
+pub use source::{SourceView, Token, TokenClass};
+pub use trace::{
+    LookupKind, ResolvedBy, SymbolTrace, TraceDefinition, TraceError, TraceImport, TraceOutcome,
+    UnresolvedUse,
+};
 
 /// Version of this crate, for "about" boxes and bug reports.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

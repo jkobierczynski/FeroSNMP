@@ -144,6 +144,8 @@ pub(crate) fn diagnostics(report: &mib_rs::DiagnosticReport) -> Vec<Diagnostic> 
                 module: diagnostic.module.clone(),
                 location: location(&entry),
                 message: diagnostic.message.clone(),
+                hint: None,
+                symbol: None,
             }
         })
         .collect()

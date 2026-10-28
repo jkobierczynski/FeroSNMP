@@ -1,7 +1,7 @@
 //! A loaded, immutable set of MIB modules and the OID tree they define.
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use mib_rs::mib as m;
@@ -9,9 +9,12 @@ use mib_rs::mib as m;
 use crate::convert;
 use crate::details::{IndexPart, NodeDetails, NodeKind, Syntax};
 use crate::diagnostic::Diagnostic;
+use crate::hints::{self, HintContext};
 use crate::library::Strictness;
 use crate::oid::Oid;
 use crate::pattern::Pattern;
+use crate::source::SourceView;
+use crate::trace::{self, SymbolTrace, TraceError};
 
 /// Every module loaded from a [`MibLibrary`](crate::MibLibrary), merged into
 /// one OID tree.
@@ -32,8 +35,12 @@ struct Inner {
 }
 
 impl MibSet {
-    pub(crate) fn new(mib: mib_rs::Mib, strictness: Strictness) -> Self {
-        let diagnostics = convert::diagnostics(&mib.diagnostic_report());
+    /// Wrap a loaded mib-rs set. `folders` are the folders that were
+    /// searched, for the hints about modules that were not found.
+    pub(crate) fn new(mib: mib_rs::Mib, strictness: Strictness, folders: &[PathBuf]) -> Self {
+        let mut diagnostics = convert::diagnostics(&mib.diagnostic_report());
+        diagnostics.extend(hints::extra_diagnostics(&mib, strictness));
+        hints::add_hints(&HintContext { mib: &mib, folders }, &mut diagnostics);
         MibSet {
             inner: Arc::new(Inner {
                 mib,
@@ -55,6 +62,40 @@ impl MibSet {
     /// Problems found while loading, ordered by kind, then module and position.
     pub fn diagnostics(&self) -> &[Diagnostic] {
         &self.inner.diagnostics
+    }
+
+    /// Explain how a name resolves: `ifIndex` looks at every module that
+    /// defines it, `IF-MIB::ifIndex` follows the rules for a reference
+    /// written in IF-MIB (its own definitions, its IMPORTS, then the
+    /// fallbacks the strictness allows). Names that start with an uppercase
+    /// letter are looked up as types.
+    ///
+    /// ```
+    /// use mib_core::{MibLibrary, TraceOutcome};
+    ///
+    /// let set = MibLibrary::new().with_system_folders(false).load()?;
+    /// let trace = set.trace("SNMPv2-TC::DisplayString")?;
+    /// assert!(matches!(trace.outcome, TraceOutcome::Resolved { .. }));
+    /// println!("{trace}");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn trace(&self, query: &str) -> Result<SymbolTrace, TraceError> {
+        trace::trace(self.mib(), self.strictness(), query)
+    }
+
+    /// The text of a loaded file with its tokens classified, for showing it
+    /// with the place of a diagnostic highlighted. This is the text exactly
+    /// as it was loaded, even if the file changed on disk since. Returns
+    /// `None` for files that are not part of the set; use
+    /// [`SourceView::read`] for those.
+    pub fn source_view(&self, file: &Path) -> Option<SourceView> {
+        self.mib().modules().find_map(|module| {
+            let source = module.source()?;
+            let mib_rs::SourceOrigin::File { path } = source.origin() else {
+                return None;
+            };
+            (path == file).then(|| SourceView::from_bytes(path, source.bytes().to_vec()))
+        })
     }
 
     /// Every loaded module, including the built-in foundation modules.

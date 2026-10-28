@@ -1,0 +1,37 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+crates/mib-core/tests/hints/HINT-IDENTIFIERS-MIB:31:1: error: HINT-IDENTIFIERS-MIB: identifier "badEndsWithHyphen-" ends with hyphen [identifier-hyphen-end]
+    hint: Remove the hyphen at the end: badEndsWithHyphen.
+crates/mib-core/tests/hints/HINT-IDENTIFIERS-MIB:33:1: error: HINT-IDENTIFIERS-MIB: identifier "thisObjectNameIsMuchLongerThanSixtyFourCharactersWhichTheSmiForbidsX" exceeds 64 character limit (68 chars) [identifier-length-64]
+    hint: Shorten the name to at most 64 characters (32 or fewer is best).
+crates/mib-core/tests/hints/HINT-MISSING-IMPORT-MIB:18:17: error: HINT-MISSING-IMPORT-MIB: unresolved type: "missingLevel" references unknown type "HintLevel" [type-unknown]
+    hint: HintLevel is defined in HINT-DEFS-MIB: add `HintLevel FROM HINT-DEFS-MIB` to the IMPORTS.
+crates/mib-core/tests/hints/HINT-MISSING-IMPORT-MIB:36:11: error: HINT-MISSING-IMPORT-MIB: unresolved OID: "missingParent" references unknown parent "hintObjects" [oid-orphan]
+    hint: hintObjects is defined in HINT-DEFS-MIB: add `hintObjects FROM HINT-DEFS-MIB` to the IMPORTS.
+crates/mib-core/tests/hints/HINT-MISSING-MODULE-MIB:8:5: error: HINT-MISSING-MODULE-MIB: unresolved import: "acmeRoot" from "ACME-NOWHERE-MIB" (module_not_found) [import-module-not-found]
+    hint: ACME-NOWHERE-MIB is not in any MIB folder (searched: crates/mib-core/tests/hints). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
+crates/mib-core/tests/hints/HINT-MISSING-MODULE-MIB:10:5: error: HINT-MISSING-MODULE-MIB: unresolved import: "hintRenamedRoot" from "HINT-RENAMED" (module_not_found) [import-module-not-found]
+    hint: The file crates/mib-core/tests/hints/HINT-RENAMED.my is named HINT-RENAMED, but the module in it is called HINT-RENAMED-MIB: change the IMPORTS to FROM HINT-RENAMED-MIB.
+crates/mib-core/tests/hints/HINT-MISSING-MODULE-MIB:27:11: error: HINT-MISSING-MODULE-MIB: unresolved OID: "acmeThing" references unknown parent "acmeRoot" [oid-orphan]
+    hint: acmeRoot is imported FROM ACME-NOWHERE-MIB, but that import failed; fix the IMPORTS first.
+crates/mib-core/tests/hints/HINT-MISSING-MODULE-MIB:34:11: error: HINT-MISSING-MODULE-MIB: unresolved OID: "renamedThing" references unknown parent "hintRenamedRoot" [oid-orphan]
+    hint: hintRenamedRoot is imported FROM HINT-RENAMED, but that import failed; fix the IMPORTS first.
+crates/mib-core/tests/hints/HINT-MIXED-SMI-MIB:10:14: warning: HINT-MIXED-SMI-MIB: RFC-1215 is the SMIv1 framework, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Import the SMI from SNMPv2-SMI instead (and DisplayString and other textual conventions from SNMPv2-TC).
+crates/mib-core/tests/hints/HINT-MIXED-SMI-MIB:23:5: warning: HINT-MIXED-SMI-MIB: ACCESS is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Write MAX-ACCESS instead of ACCESS (RFC 2578).
+crates/mib-core/tests/hints/HINT-MIXED-SMI-MIB:24:17: warning: HINT-MIXED-SMI-MIB: STATUS mandatory is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Write STATUS current instead of mandatory (RFC 3584).
+crates/mib-core/tests/hints/HINT-MIXED-SMI-MIB:28:1: warning: HINT-MIXED-SMI-MIB: TRAP-TYPE is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Rewrite it as a NOTIFICATION-TYPE: OBJECTS instead of VARIABLES, add STATUS current, drop ENTERPRISE, and give it the OID { <enterprise> 0 <trap number> } so it keeps its trap OID (RFC 3584).
+crates/mib-core/tests/hints/HINT-SMIV1-IN-SMIV2-MIB:17:1: error: HINT-SMIV1-IN-SMIV2-MIB: "oldAccess": ACCESS is SMIv1 style, use MAX-ACCESS in SMIv2 [access-in-smiv2]
+    hint: Write MAX-ACCESS instead of ACCESS (RFC 2578).
+crates/mib-core/tests/hints/HINT-SMIV1-IN-SMIV2-MIB:17:1: error: HINT-SMIV1-IN-SMIV2-MIB: "oldAccess": invalid status mandatory in SMIv2 [status-invalid-smiv2]
+    hint: Write STATUS current instead of mandatory (RFC 3584).
+crates/mib-core/tests/hints/HINT-WRONG-IMPORT-MIB:7:5: error: HINT-WRONG-IMPORT-MIB: unresolved import: "HintLevel" from "SNMPv2-TC" (symbol_not_exported) [import-not-found]
+    hint: SNMPv2-TC does not define HintLevel, but HINT-DEFS-MIB does: change the IMPORTS to `HintLevel FROM HINT-DEFS-MIB`.
+crates/mib-core/tests/hints/HINT-WRONG-IMPORT-MIB:20:17: error: HINT-WRONG-IMPORT-MIB: unresolved type: "wrongLevel" references unknown type "HintLevel" [type-unknown]
+    hint: HintLevel is imported FROM SNMPv2-TC, but that import failed; fix the IMPORTS first.
+8 modules checked: 12 errors, 4 warnings

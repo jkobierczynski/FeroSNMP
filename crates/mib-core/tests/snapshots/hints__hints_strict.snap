@@ -1,0 +1,65 @@
+---
+source: crates/mib-core/tests/hints.rs
+expression: "report(&load(Strictness::Strict))"
+---
+HINT-DEFS-MIB:20:1: style: "HintLevel": textual convention without DISPLAY-HINT [type-without-format]
+HINT-DEFS-MIB:27:1: style: hintLevel: differs from HintLevel only in case [identifier-case-match]
+HINT-IDENTIFIERS-MIB:17:1: style: identifier "bad_underscore" contains underscore (RFC violation) [identifier-underscore]
+    symbol: bad_underscore
+    hint: Rename it to badUnderscore: SMIv2 names are letters and digits only, in camelCase. Change every reference to it too.
+HINT-IDENTIFIERS-MIB:24:1: warning: identifier "bad-hyphen" should not contain hyphens in SMIv2 MIB [identifier-hyphen-smiv2]
+    symbol: bad-hyphen
+    hint: Rename it to badHyphen: SMIv2 names are letters and digits only, in camelCase. Change every reference to it too.
+HINT-IDENTIFIERS-MIB:31:1: error: identifier "badEndsWithHyphen-" ends with hyphen [identifier-hyphen-end]
+    symbol: badEndsWithHyphen-
+    hint: Remove the hyphen at the end: badEndsWithHyphen.
+HINT-IDENTIFIERS-MIB:31:1: warning: identifier "badEndsWithHyphen-" should not contain hyphens in SMIv2 MIB [identifier-hyphen-smiv2]
+    symbol: badEndsWithHyphen-
+    hint: Rename it to badEndsWithHyphen: SMIv2 names are letters and digits only, in camelCase. Change every reference to it too.
+HINT-IDENTIFIERS-MIB:33:1: error: identifier "thisObjectNameIsMuchLongerThanSixtyFourCharactersWhichTheSmiForbidsX" exceeds 64 character limit (68 chars) [identifier-length-64]
+    symbol: thisObjectNameIsMuchLongerThanSixtyFourCharactersWhichTheSmiForbidsX
+    hint: Shorten the name to at most 64 characters (32 or fewer is best).
+HINT-MISSING-IMPORT-MIB:18:17: error: unresolved type: "missingLevel" references unknown type "HintLevel" [type-unknown]
+    symbol: HintLevel
+    hint: HintLevel is defined in HINT-DEFS-MIB: add `HintLevel FROM HINT-DEFS-MIB` to the IMPORTS.
+HINT-MISSING-IMPORT-MIB:25:17: error: unresolved type: "missingName" references unknown type "DisplayString" [type-unknown]
+    symbol: DisplayString
+    hint: DisplayString is defined in SNMPv2-TC: add `DisplayString FROM SNMPv2-TC` to the IMPORTS.
+HINT-MISSING-IMPORT-MIB:36:11: error: unresolved OID: "missingParent" references unknown parent "hintObjects" [oid-orphan]
+    symbol: hintObjects
+    hint: hintObjects is defined in HINT-DEFS-MIB: add `hintObjects FROM HINT-DEFS-MIB` to the IMPORTS.
+HINT-MISSING-MODULE-MIB:8:5: error: unresolved import: "acmeRoot" from "ACME-NOWHERE-MIB" (module_not_found) [import-module-not-found]
+    symbol: acmeRoot
+    hint: ACME-NOWHERE-MIB is not in any MIB folder (searched: <hints>). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
+HINT-MISSING-MODULE-MIB:10:5: error: unresolved import: "hintRenamedRoot" from "HINT-RENAMED" (module_not_found) [import-module-not-found]
+    symbol: hintRenamedRoot
+    hint: The file <hints>/HINT-RENAMED.my is named HINT-RENAMED, but the module in it is called HINT-RENAMED-MIB: change the IMPORTS to FROM HINT-RENAMED-MIB.
+HINT-MISSING-MODULE-MIB:27:11: error: unresolved OID: "acmeThing" references unknown parent "acmeRoot" [oid-orphan]
+    symbol: acmeRoot
+    hint: acmeRoot is imported FROM ACME-NOWHERE-MIB, but that import failed; fix the IMPORTS first.
+HINT-MISSING-MODULE-MIB:34:11: error: unresolved OID: "renamedThing" references unknown parent "hintRenamedRoot" [oid-orphan]
+    symbol: hintRenamedRoot
+    hint: hintRenamedRoot is imported FROM HINT-RENAMED, but that import failed; fix the IMPORTS first.
+HINT-MIXED-SMI-MIB:10:14: warning: RFC-1215 is the SMIv1 framework, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Import the SMI from SNMPv2-SMI instead (and DisplayString and other textual conventions from SNMPv2-TC).
+HINT-MIXED-SMI-MIB:23:5: warning: ACCESS is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Write MAX-ACCESS instead of ACCESS (RFC 2578).
+HINT-MIXED-SMI-MIB:24:17: warning: STATUS mandatory is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Write STATUS current instead of mandatory (RFC 3584).
+HINT-MIXED-SMI-MIB:28:1: warning: TRAP-TYPE is SMIv1, but this module is SMIv2 (MODULE-IDENTITY at line 12) [smiv1-in-smiv2]
+    hint: Rewrite it as a NOTIFICATION-TYPE: OBJECTS instead of VARIABLES, add STATUS current, drop ENTERPRISE, and give it the OID { <enterprise> 0 <trap number> } so it keeps its trap OID (RFC 3584).
+HINT-RENAMED.my:4:1: warning: SMIv2 module HINT-RENAMED-MIB lacks MODULE-IDENTITY [missing-module-identity]
+HINT-RENAMED.my:4:1: info: module HINT-RENAMED-MIB is in a file named HINT-RENAMED.my [module-file-name-mismatch]
+    hint: Rename the file to HINT-RENAMED-MIB.mib (or HINT-RENAMED-MIB with no extension); net-snmp and smilint look modules up by file name and will not find it otherwise.
+HINT-SMIV1-IN-SMIV2-MIB:17:1: error: "oldAccess": ACCESS is SMIv1 style, use MAX-ACCESS in SMIv2 [access-in-smiv2]
+    hint: Write MAX-ACCESS instead of ACCESS (RFC 2578).
+HINT-SMIV1-IN-SMIV2-MIB:17:1: warning: oldAccess: use Integer32 instead of INTEGER in SMIv2 [integer-in-smiv2]
+    hint: Use Integer32 for a number, or list the values (INTEGER { up(1), down(2) }) for an enumeration.
+HINT-SMIV1-IN-SMIV2-MIB:17:1: error: "oldAccess": invalid status mandatory in SMIv2 [status-invalid-smiv2]
+    hint: Write STATUS current instead of mandatory (RFC 3584).
+HINT-WRONG-IMPORT-MIB:7:5: error: unresolved import: "HintLevel" from "SNMPv2-TC" (symbol_not_exported) [import-not-found]
+    symbol: HintLevel
+    hint: SNMPv2-TC does not define HintLevel, but HINT-DEFS-MIB does: change the IMPORTS to `HintLevel FROM HINT-DEFS-MIB`.
+HINT-WRONG-IMPORT-MIB:20:17: error: unresolved type: "wrongLevel" references unknown type "HintLevel" [type-unknown]
+    symbol: HintLevel
+    hint: HintLevel is imported FROM SNMPv2-TC, but that import failed; fix the IMPORTS first.

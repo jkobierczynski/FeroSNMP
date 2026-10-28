@@ -3,17 +3,29 @@ source: apps/cli/tests/cli.rs
 expression: run.stdout
 ---
 corpus/ietf/BFD-STD-MIB:14:6: error: BFD-STD-MIB: unresolved import: "InterfaceIndexOrZero" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/BFD-STD-MIB:17:6: error: BFD-STD-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/BFD-STD-MIB:17:19: error: BFD-STD-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/BFD-STD-MIB:17:36: error: BFD-STD-MIB: unresolved import: "InetPortNumber" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/BFD-STD-MIB:20:6: error: BFD-STD-MIB: unresolved import: "IndexIntegerNextFree" from "DIFFSERV-MIB" (module_not_found) [import-module-not-found]
+    hint: DIFFSERV-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/BFD-STD-MIB:133:20: error: BFD-STD-MIB: unresolved type: "bfdSessIndexNext" references unknown type "IndexIntegerNextFree" [type-unknown]
+    hint: IndexIntegerNextFree is imported FROM DIFFSERV-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:289:17: error: BFD-STD-MIB: unresolved type: "bfdSessEchoSourceUdpPort" references unknown type "InetPortNumber" [type-unknown]
+    hint: InetPortNumber is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:432:17: error: BFD-STD-MIB: unresolved type: "bfdSessInterface" references unknown type "InterfaceIndexOrZero" [type-unknown]
+    hint: InterfaceIndexOrZero is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:443:17: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:459:17: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:469:17: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:484:17: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:995:2: minor: BFD-STD-MIB: INDEX "bfdSessDiscriminator" of "bfdSessDiscMapEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/BFD-STD-MIB:1034:2: minor: BFD-STD-MIB: INDEX "bfdSessDstAddr" of "bfdSessIpMapEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/BFD-STD-MIB:1034:2: minor: BFD-STD-MIB: INDEX "bfdSessDstAddrType" of "bfdSessIpMapEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -21,294 +33,577 @@ corpus/ietf/BFD-STD-MIB:1034:2: minor: BFD-STD-MIB: INDEX "bfdSessInterface" of 
 corpus/ietf/BFD-STD-MIB:1034:2: minor: BFD-STD-MIB: INDEX "bfdSessSrcAddr" of "bfdSessIpMapEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/BFD-STD-MIB:1034:2: minor: BFD-STD-MIB: INDEX "bfdSessSrcAddrType" of "bfdSessIpMapEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/BFD-STD-MIB:1154:6: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1161:6: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1166:6: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1173:6: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1255:6: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1263:6: error: BFD-STD-MIB: unresolved type: "bfdSessSrcAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1269:6: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/BFD-STD-MIB:1277:6: error: BFD-STD-MIB: unresolved type: "bfdSessDstAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENERGY-OBJECT-MIB.my:15:5: error: ENERGY-OBJECT-MIB: unresolved import: "OwnerString" from "RMON-MIB" (module_not_found) [import-module-not-found]
+    hint: RMON-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/ENERGY-OBJECT-MIB.my:416:21: error: ENERGY-OBJECT-MIB: unresolved type: "eoPowerStateEnterReason" references unknown type "OwnerString" [type-unknown]
+    hint: OwnerString is imported FROM RMON-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:13:5: error: ENTITY-MIB: unresolved import: "SnmpAdminString" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/ENTITY-MIB:319:17: error: ENTITY-MIB: unresolved type: "entPhysicalDescr" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:446:17: error: ENTITY-MIB: unresolved type: "entPhysicalName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:469:17: error: ENTITY-MIB: unresolved type: "entPhysicalHardwareRev" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:490:17: error: ENTITY-MIB: unresolved type: "entPhysicalFirmwareRev" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:508:17: error: ENTITY-MIB: unresolved type: "entPhysicalSoftwareRev" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:526:17: error: ENTITY-MIB: unresolved type: "entPhysicalSerialNum" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:568:17: error: ENTITY-MIB: unresolved type: "entPhysicalMfgName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:588:17: error: ENTITY-MIB: unresolved type: "entPhysicalModelName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:603:17: error: ENTITY-MIB: unresolved type: "entPhysicalAlias" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:629:17: error: ENTITY-MIB: unresolved type: "entPhysicalAssetID" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:778:17: error: ENTITY-MIB: unresolved type: "entLogicalDescr" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:907:17: error: ENTITY-MIB: unresolved type: "entLogicalContextName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/ENTITY-MIB:964:1: minor: ENTITY-MIB: INDEX "entLPPhysicalIndex" of "entLPMappingEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/ENTITY-MIB:1127:1: minor: ENTITY-MIB: INDEX "entPhysicalChildIndex" of "entPhysicalContainsEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/GBOND-MIB:20:5: error: GBOND-MIB: unresolved import: "SnmpAdminString" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:22:5: error: GBOND-MIB: unresolved import: "ifIndex" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:24:5: error: GBOND-MIB: unresolved import: "HCPerfCurrentCount" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:25:5: error: GBOND-MIB: unresolved import: "HCPerfIntervalCount" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:26:5: error: GBOND-MIB: unresolved import: "HCPerfIntervalThreshold" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:27:5: error: GBOND-MIB: unresolved import: "HCPerfValidIntervals" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:28:5: error: GBOND-MIB: unresolved import: "HCPerfInvalidIntervals" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:29:5: error: GBOND-MIB: unresolved import: "HCPerfTimeElapsed" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:30:5: error: GBOND-MIB: unresolved import: "HCPerfTotalCount" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/GBOND-MIB:394:15: error: GBOND-MIB: unresolved INDEX: "gBondPortConfEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:694:18: error: GBOND-MIB: unresolved type: "gBondPortConfPmTcaConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:740:15: error: GBOND-MIB: unresolved INDEX: "gBondPortCapEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:856:15: error: GBOND-MIB: unresolved INDEX: "gBondPortStatEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1067:15: error: GBOND-MIB: unresolved INDEX: "gBondPortPmCurEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1090:18: error: GBOND-MIB: unresolved type: "gBondPortPmCurES" references unknown type "HCPerfTotalCount" [type-unknown]
+    hint: HCPerfTotalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1113:18: error: GBOND-MIB: unresolved type: "gBondPortPmCurSES" references unknown type "HCPerfTotalCount" [type-unknown]
+    hint: HCPerfTotalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1142:18: error: GBOND-MIB: unresolved type: "gBondPortPmCurUAS" references unknown type "HCPerfTotalCount" [type-unknown]
+    hint: HCPerfTotalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1165:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinValidIntervals" references unknown type "HCPerfValidIntervals" [type-unknown]
+    hint: HCPerfValidIntervals is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1187:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinInvalidIntervals" references unknown type "HCPerfInvalidIntervals" [type-unknown]
+    hint: HCPerfInvalidIntervals is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1202:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1217:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinES" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1231:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinSES" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1245:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur15MinUAS" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1297:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur1DayTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1312:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur1DayES" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1326:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur1DaySES" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1340:18: error: GBOND-MIB: unresolved type: "gBondPortPmCur1DayUAS" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1375:15: error: GBOND-MIB: unresolved INDEX: "gBondPortPm15MinEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1404:18: error: GBOND-MIB: unresolved type: "gBondPortPm15MinIntervalMoniTime" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1416:18: error: GBOND-MIB: unresolved type: "gBondPortPm15MinIntervalES" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1431:18: error: GBOND-MIB: unresolved type: "gBondPortPm15MinIntervalSES" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1446:18: error: GBOND-MIB: unresolved type: "gBondPortPm15MinIntervalUAS" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1504:15: error: GBOND-MIB: unresolved INDEX: "gBondPortPm1DayEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1533:18: error: GBOND-MIB: unresolved type: "gBondPortPm1DayIntervalMoniTime" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1550:18: error: GBOND-MIB: unresolved type: "gBondPortPm1DayIntervalES" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1565:18: error: GBOND-MIB: unresolved type: "gBondPortPm1DayIntervalSES" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1580:18: error: GBOND-MIB: unresolved type: "gBondPortPm1DayIntervalUAS" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1663:18: error: GBOND-MIB: unresolved type: "gBondPortPmTcaProfileName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1672:18: error: GBOND-MIB: unresolved type: "gBondPortPmTcaProfileThresh15MinES" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1694:18: error: GBOND-MIB: unresolved type: "gBondPortPmTcaProfileThresh15MinSES" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1717:18: error: GBOND-MIB: unresolved type: "gBondPortPmTcaProfileThresh15MinUAS" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/GBOND-MIB:1850:15: error: GBOND-MIB: unresolved INDEX: "gBondBceConfEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/IANA-ENTITY-MIB:42:21: minor: IANA-ENTITY-MIB: revision 201507160000Z is not in reverse chronological order [revision-not-descending]
 corpus/ietf/IANA-GBOND-TC-MIB:11:4: minor: IANA-GBOND-TC-MIB: revision for LAST-UPDATED 201706230000Z is missing [revision-last-updated]
 corpus/ietf/IPV6-UDP-MIB.txt:66:1: minor: IPV6-UDP-MIB: INDEX "ipv6UdpIfIndex" of "ipv6UdpEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/LISP-MIB.my:21:5: error: LISP-MIB: unresolved import: "MplsL3VpnName" from "MPLS-L3VPN-STD-MIB" (module_not_found) [import-module-not-found]
+    hint: MPLS-L3VPN-STD-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/LISP-MIB.my:23:5: error: LISP-MIB: unresolved import: "AddressFamilyNumbers" from "IANA-ADDRESS-FAMILY-NUMBERS-MIB" (module_not_found) [import-module-not-found]
+    hint: IANA-ADDRESS-FAMILY-NUMBERS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/LISP-MIB.my:230:19: error: LISP-MIB: unresolved type: "lispFeaturesAddressFamily" references unknown type "AddressFamilyNumbers" [type-unknown]
+    hint: AddressFamilyNumbers is imported FROM IANA-ADDRESS-FAMILY-NUMBERS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/LISP-MIB.my:393:19: error: LISP-MIB: unresolved type: "lispIidToVrfName" references unknown type "MplsL3VpnName" [type-unknown]
+    hint: MplsL3VpnName is imported FROM MPLS-L3VPN-STD-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:6:5: error: MGMD-STD-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/MGMD-STD-MIB:6:18: error: MGMD-STD-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/MGMD-STD-MIB:9:5: error: MGMD-STD-MIB: unresolved import: "InterfaceIndexOrZero" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/MGMD-STD-MIB:10:5: error: MGMD-STD-MIB: unresolved import: "InterfaceIndex" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/MGMD-STD-MIB:117:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostInterfaceIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:128:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostInterfaceQuerierType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:142:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostInterfaceQuerier" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:279:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:291:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceQuerierType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:305:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceQuerier" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:420:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceProxyIfIndex" references unknown type "InterfaceIndexOrZero" [type-unknown]
+    hint: InterfaceIndexOrZero is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:544:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostCacheAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:554:17: error: MGMD-STD-MIB: unresolved type: "mgmdHostCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:566:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostCacheIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:585:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostCacheLastReporter" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:652:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:663:17: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:675:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:685:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheLastReporter" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:790:1: minor: MGMD-STD-MIB: INDEX "mgmdInverseHostCacheAddress" of "mgmdInverseHostCacheEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/MGMD-STD-MIB:810:16: error: MGMD-STD-MIB: unresolved type: "mgmdInverseHostCacheIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:819:16: error: MGMD-STD-MIB: unresolved type: "mgmdInverseHostCacheAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:828:17: error: MGMD-STD-MIB: unresolved type: "mgmdInverseHostCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:855:1: minor: MGMD-STD-MIB: INDEX "mgmdInverseRouterCacheAddress" of "mgmdInverseRouterCacheEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/MGMD-STD-MIB:875:16: error: MGMD-STD-MIB: unresolved type: "mgmdInverseRouterCacheIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:885:16: error: MGMD-STD-MIB: unresolved type: "mgmdInverseRouterCacheAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:894:17: error: MGMD-STD-MIB: unresolved type: "mgmdInverseRouterCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:940:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostSrcListAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:951:17: error: MGMD-STD-MIB: unresolved type: "mgmdHostSrcListAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:961:16: error: MGMD-STD-MIB: unresolved type: "mgmdHostSrcListIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:971:17: error: MGMD-STD-MIB: unresolved type: "mgmdHostSrcListHostAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1031:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterSrcListAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1043:17: error: MGMD-STD-MIB: unresolved type: "mgmdRouterSrcListAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1053:16: error: MGMD-STD-MIB: unresolved type: "mgmdRouterSrcListIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1063:17: error: MGMD-STD-MIB: unresolved type: "mgmdRouterSrcListHostAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1157:5: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheLastReporter" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1162:5: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceQuerier" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1167:5: error: MGMD-STD-MIB: unresolved type: "mgmdInverseRouterCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1220:5: error: MGMD-STD-MIB: unresolved type: "mgmdRouterCacheLastReporter" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1225:5: error: MGMD-STD-MIB: unresolved type: "mgmdRouterInterfaceQuerier" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/MGMD-STD-MIB:1230:5: error: MGMD-STD-MIB: unresolved type: "mgmdInverseRouterCacheAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:33:5: error: NTPv4-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/NTPv4-MIB.my:34:5: error: NTPv4-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/NTPv4-MIB.my:36:5: error: NTPv4-MIB: unresolved import: "Utf8String" from "SYSAPPL-MIB" (module_not_found) [import-module-not-found]
+    hint: SYSAPPL-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/NTPv4-MIB.my:136:21: error: NTPv4-MIB: unresolved type: "ntpEntSoftwareName" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:144:21: error: NTPv4-MIB: unresolved type: "ntpEntSoftwareVersion" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:153:21: error: NTPv4-MIB: unresolved type: "ntpEntSoftwareVendor" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:161:21: error: NTPv4-MIB: unresolved type: "ntpEntSystemType" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:249:21: error: NTPv4-MIB: unresolved type: "ntpEntStatusActiveRefSourceName" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:514:21: error: NTPv4-MIB: unresolved type: "ntpAssocName" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:530:21: error: NTPv4-MIB: unresolved type: "ntpAssocAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:540:21: error: NTPv4-MIB: unresolved type: "ntpAssocAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/NTPv4-MIB.my:701:21: error: NTPv4-MIB: unresolved type: "ntpEntNotifMessage" references unknown type "Utf8String" [type-unknown]
+    hint: Utf8String is imported FROM SYSAPPL-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:11:10: error: OSPFV3-MIB: unresolved import: "InterfaceIndex" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:13:10: error: OSPFV3-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:13:27: error: OSPFV3-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:13:40: error: OSPFV3-MIB: unresolved import: "InetAddressPrefixLength" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:14:10: error: OSPFV3-MIB: unresolved import: "InetAddressIPv6" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:16:10: error: OSPFV3-MIB: unresolved import: "Metric" from "OSPF-MIB" (module_not_found) [import-module-not-found]
+    hint: OSPF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:16:18: error: OSPFV3-MIB: unresolved import: "BigMetric" from "OSPF-MIB" (module_not_found) [import-module-not-found]
+    hint: OSPF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:16:29: error: OSPFV3-MIB: unresolved import: "Status" from "OSPF-MIB" (module_not_found) [import-module-not-found]
+    hint: OSPF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:17:10: error: OSPFV3-MIB: unresolved import: "HelloRange" from "OSPF-MIB" (module_not_found) [import-module-not-found]
+    hint: OSPF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:17:22: error: OSPFV3-MIB: unresolved import: "DesignatedRouterPriority" from "OSPF-MIB" (module_not_found) [import-module-not-found]
+    hint: OSPF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/OSPFV3-MIB.my:222:26: error: OSPFV3-MIB: unresolved type: "ospfv3AdminStatus" references unknown type "Status" [type-unknown]
+    hint: Status is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:793:26: error: OSPFV3-MIB: unresolved type: "ospfv3AreaStubMetric" references unknown type "BigMetric" [type-unknown]
+    hint: BigMetric is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1258:25: error: OSPFV3-MIB: unresolved type: "ospfv3LinkLsdbIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1431:26: error: OSPFV3-MIB: unresolved type: "ospfv3HostAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1443:26: error: OSPFV3-MIB: unresolved type: "ospfv3HostAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1455:26: error: OSPFV3-MIB: unresolved type: "ospfv3HostMetric" references unknown type "Metric" [type-unknown]
+    hint: Metric is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1577:26: error: OSPFV3-MIB: unresolved type: "ospfv3IfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1622:26: error: OSPFV3-MIB: unresolved type: "ospfv3IfAdminStatus" references unknown type "Status" [type-unknown]
+    hint: Status is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1639:26: error: OSPFV3-MIB: unresolved type: "ospfv3IfRtrPriority" references unknown type "DesignatedRouterPriority" [type-unknown]
+    hint: DesignatedRouterPriority is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1688:26: error: OSPFV3-MIB: unresolved type: "ospfv3IfHelloInterval" references unknown type "HelloRange" [type-unknown]
+    hint: HelloRange is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1807:26: error: OSPFV3-MIB: unresolved type: "ospfv3IfMetricValue" references unknown type "Metric" [type-unknown]
+    hint: Metric is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:1986:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2035:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtIfHelloInterval" references unknown type "HelloRange" [type-unknown]
+    hint: HelloRange is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2189:26: error: OSPFV3-MIB: unresolved type: "ospfv3NbrIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2217:26: error: OSPFV3-MIB: unresolved type: "ospfv3NbrAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2226:26: error: OSPFV3-MIB: unresolved type: "ospfv3NbrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2246:26: error: OSPFV3-MIB: unresolved type: "ospfv3NbrPriority" references unknown type "DesignatedRouterPriority" [type-unknown]
+    hint: DesignatedRouterPriority is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2310:26: error: OSPFV3-MIB: unresolved type: "ospfv3NbrIfId" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2425:26: error: OSPFV3-MIB: unresolved type: "ospfv3CfgNbrIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2444:26: error: OSPFV3-MIB: unresolved type: "ospfv3CfgNbrAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2454:26: error: OSPFV3-MIB: unresolved type: "ospfv3CfgNbrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2463:26: error: OSPFV3-MIB: unresolved type: "ospfv3CfgNbrPriority" references unknown type "DesignatedRouterPriority" [type-unknown]
+    hint: DesignatedRouterPriority is imported FROM OSPF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2562:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrIfIndex" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2580:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2589:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2659:26: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrIfId" references unknown type "InterfaceIndex" [type-unknown]
+    hint: InterfaceIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2800:26: error: OSPFV3-MIB: unresolved type: "ospfv3AreaAggregatePrefixType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2809:26: error: OSPFV3-MIB: unresolved type: "ospfv3AreaAggregatePrefix" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:2819:26: error: OSPFV3-MIB: unresolved type: "ospfv3AreaAggregatePrefixLength" references unknown type "InetAddressPrefixLength" [type-unknown]
+    hint: InetAddressPrefixLength is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:3089:19: error: OSPFV3-MIB: unresolved type: "ospfv3PacketSrc" references unknown type "InetAddressIPv6" [type-unknown]
+    hint: InetAddressIPv6 is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:3372:10: error: OSPFV3-MIB: unresolved type: "ospfv3NbrAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:3378:10: error: OSPFV3-MIB: unresolved type: "ospfv3NbrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:3384:10: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrAddressType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/OSPFV3-MIB.my:3390:10: error: OSPFV3-MIB: unresolved type: "ospfv3VirtNbrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:16:4: error: PW-STD-MIB: unresolved import: "SnmpAdminString" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:19:4: error: PW-STD-MIB: unresolved import: "InterfaceIndexOrZero" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:22:4: error: PW-STD-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:22:21: error: PW-STD-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:25:4: error: PW-STD-MIB: unresolved import: "PerfCurrentCount" from "PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:25:22: error: PW-STD-MIB: unresolved import: "PerfIntervalCount" from "PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:28:4: error: PW-STD-MIB: unresolved import: "HCPerfCurrentCount" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:28:24: error: PW-STD-MIB: unresolved import: "HCPerfIntervalCount" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:28:45: error: PW-STD-MIB: unresolved import: "HCPerfTimeElapsed" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:29:4: error: PW-STD-MIB: unresolved import: "HCPerfValidIntervals" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/PW-STD-MIB:353:18: error: PW-STD-MIB: unresolved type: "pwPeerAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:364:18: error: PW-STD-MIB: unresolved type: "pwPeerAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:388:18: error: PW-STD-MIB: unresolved type: "pwIfIndex" references unknown type "InterfaceIndexOrZero" [type-unknown]
+    hint: InterfaceIndexOrZero is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:603:18: error: PW-STD-MIB: unresolved type: "pwRemoteIfString" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:757:18: error: PW-STD-MIB: unresolved type: "pwName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:766:18: error: PW-STD-MIB: unresolved type: "pwDescr" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:888:13: error: PW-STD-MIB: unresolved type: "pwTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:898:13: error: PW-STD-MIB: unresolved type: "pwValidIntervals" references unknown type "HCPerfValidIntervals" [type-unknown]
+    hint: HCPerfValidIntervals is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1005:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentInHCPackets" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1018:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentInHCBytes" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1030:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentOutHCPackets" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1042:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentOutHCBytes" references unknown type "HCPerfCurrentCount" [type-unknown]
+    hint: HCPerfCurrentCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1054:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentInPackets" references unknown type "PerfCurrentCount" [type-unknown]
+    hint: PerfCurrentCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1066:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentInBytes" references unknown type "PerfCurrentCount" [type-unknown]
+    hint: PerfCurrentCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1078:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentOutPackets" references unknown type "PerfCurrentCount" [type-unknown]
+    hint: PerfCurrentCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1091:18: error: PW-STD-MIB: unresolved type: "pwPerfCurrentOutBytes" references unknown type "PerfCurrentCount" [type-unknown]
+    hint: PerfCurrentCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1167:16: error: PW-STD-MIB: unresolved type: "pwPerfIntervalTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1175:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalInHCPackets" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1187:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalInHCBytes" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1199:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalOutHCPackets" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1211:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalOutHCBytes" references unknown type "HCPerfIntervalCount" [type-unknown]
+    hint: HCPerfIntervalCount is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1223:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalInPackets" references unknown type "PerfIntervalCount" [type-unknown]
+    hint: PerfIntervalCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1236:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalInBytes" references unknown type "PerfIntervalCount" [type-unknown]
+    hint: PerfIntervalCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1248:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalOutPackets" references unknown type "PerfIntervalCount" [type-unknown]
+    hint: PerfIntervalCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1261:18: error: PW-STD-MIB: unresolved type: "pwPerfIntervalOutBytes" references unknown type "PerfIntervalCount" [type-unknown]
+    hint: PerfIntervalCount is imported FROM PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1329:17: error: PW-STD-MIB: unresolved type: "pwPerf1DayIntervalTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1450:18: error: PW-STD-MIB: unresolved type: "pwIndexMappingPeerAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1458:18: error: PW-STD-MIB: unresolved type: "pwIndexMappingPeerAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1514:18: error: PW-STD-MIB: unresolved type: "pwPeerMappingPeerAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1522:18: error: PW-STD-MIB: unresolved type: "pwPeerMappingPeerAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1927:4: error: PW-STD-MIB: unresolved type: "pwPeerAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:1934:4: error: PW-STD-MIB: unresolved type: "pwPeerAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:2061:4: error: PW-STD-MIB: unresolved type: "pwPeerAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/PW-STD-MIB:2067:4: error: PW-STD-MIB: unresolved type: "pwPeerAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-TLS-TM-MIB.txt:13:5: error: SNMP-TLS-TM-MIB: unresolved import: "SnmpAdminString" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/SNMP-TLS-TM-MIB.txt:15:5: error: SNMP-TLS-TM-MIB: unresolved import: "snmpTargetParamsName" from "SNMP-TARGET-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-TARGET-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/SNMP-TLS-TM-MIB.txt:15:27: error: SNMP-TLS-TM-MIB: unresolved import: "snmpTargetAddrName" from "SNMP-TARGET-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-TARGET-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/SNMP-TLS-TM-MIB.txt:754:16: error: SNMP-TLS-TM-MIB: unresolved INDEX: "snmpTlstmParamsEntry" references unknown object "snmpTargetParamsName" [index-unresolved]
+    hint: snmpTargetParamsName is imported FROM SNMP-TARGET-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-TLS-TM-MIB.txt:915:16: error: SNMP-TLS-TM-MIB: unresolved INDEX: "snmpTlstmAddrEntry" references unknown object "snmpTargetAddrName" [index-unresolved]
+    hint: snmpTargetAddrName is imported FROM SNMP-TARGET-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-TLS-TM-MIB.txt:940:17: error: SNMP-TLS-TM-MIB: unresolved type: "snmpTlstmAddrServerIdentity" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-USM-HMAC-SHA2-MIB.txt:5:12: error: SNMP-USM-HMAC-SHA2-MIB: unresolved import: "snmpAuthProtocols" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/SNMP-USM-HMAC-SHA2-MIB.txt:65:11: error: SNMP-USM-HMAC-SHA2-MIB: unresolved OID: "usmHMAC128SHA224AuthProtocol" references unknown parent "snmpAuthProtocols" [oid-orphan]
+    hint: snmpAuthProtocols is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-USM-HMAC-SHA2-MIB.txt:77:11: error: SNMP-USM-HMAC-SHA2-MIB: unresolved OID: "usmHMAC192SHA256AuthProtocol" references unknown parent "snmpAuthProtocols" [oid-orphan]
+    hint: snmpAuthProtocols is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-USM-HMAC-SHA2-MIB.txt:89:11: error: SNMP-USM-HMAC-SHA2-MIB: unresolved OID: "usmHMAC256SHA384AuthProtocol" references unknown parent "snmpAuthProtocols" [oid-orphan]
+    hint: snmpAuthProtocols is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/SNMP-USM-HMAC-SHA2-MIB.txt:101:11: error: SNMP-USM-HMAC-SHA2-MIB: unresolved OID: "usmHMAC384SHA512AuthProtocol" references unknown parent "snmpAuthProtocols" [oid-orphan]
+    hint: snmpAuthProtocols is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:13:4: error: VDSL2-LINE-MIB: unresolved import: "ifIndex" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VDSL2-LINE-MIB.my:19:4: error: VDSL2-LINE-MIB: unresolved import: "SnmpAdminString" from "SNMP-FRAMEWORK-MIB" (module_not_found) [import-module-not-found]
+    hint: SNMP-FRAMEWORK-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VDSL2-LINE-MIB.my:22:4: error: VDSL2-LINE-MIB: unresolved import: "HCPerfIntervalThreshold" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VDSL2-LINE-MIB.my:23:4: error: VDSL2-LINE-MIB: unresolved import: "HCPerfTimeElapsed" from "HC-PerfHist-TC-MIB" (module_not_found) [import-module-not-found]
+    hint: HC-PerfHist-TC-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VDSL2-LINE-MIB.my:255:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2LineEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:302:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineConfTemplate" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:316:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineConfFallbackTemplate" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:352:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfTemplate" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:554:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineStatusActTemplate" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:972:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2LineSegmentEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:1095:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2LineBandEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:1225:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2ChannelStatusEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:1513:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2SCStatusEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:1754:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2SCStatusBandEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:1863:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2SCStatusSegmentEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2115:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2LineInventoryEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2282:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempTemplateName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2291:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempLineProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2303:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempChan1ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2357:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempChan2ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2415:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempChan3ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2474:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfTempChan4ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:2628:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LConfProfProfileName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:3945:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2ChConfProfProfileName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4363:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempTemplateName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4371:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempLineProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4383:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempChan1ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4399:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempChan2ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4415:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempChan3ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4433:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LAlarmConfTempChan4ConfProfile" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4535:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4543:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXtucThresh15MinFecs" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4557:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXtucThresh15MinEs" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4571:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXtucThresh15MinSes" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4585:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXtucThresh15MinLoss" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4600:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXtucThresh15MinUas" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4614:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXturThresh15MinFecs" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4628:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXturThresh15MinEs" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4643:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXturThresh15MinSes" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4657:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXturThresh15MinLoss" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4671:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2LineAlarmConfProfileXturThresh15MinUas" references unknown type "HCPerfIntervalThreshold" [type-unknown]
+    hint: HCPerfIntervalThreshold is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4779:18: error: VDSL2-LINE-MIB: unresolved type: "xdsl2ChAlarmConfProfileName" references unknown type "SnmpAdminString" [type-unknown]
+    hint: SnmpAdminString is imported FROM SNMP-FRAMEWORK-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4882:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineCurrEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:4944:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2PMLCurr15MTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5055:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2PMLCurr1DayTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5159:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineInitCurrEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5360:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineHist15MinEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5511:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineHist1DayEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5661:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineInitHist15MinEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5765:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMLineInitHist1DayEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5868:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMChCurrEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5924:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2PMChCurr15MTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:5991:16: error: VDSL2-LINE-MIB: unresolved type: "xdsl2PMChCurr1DayTimeElapsed" references unknown type "HCPerfTimeElapsed" [type-unknown]
+    hint: HCPerfTimeElapsed is imported FROM HC-PerfHist-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:6052:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMChHist15MinEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VDSL2-LINE-MIB.my:6156:13: error: VDSL2-LINE-MIB: unresolved INDEX: "xdsl2PMChHist1DEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:20:12: error: VRRPV3-MIB: unresolved import: "ifIndex" from "IF-MIB" (module_not_found) [import-module-not-found]
+    hint: IF-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VRRPV3-MIB.my:22:12: error: VRRPV3-MIB: unresolved import: "InetAddressType" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VRRPV3-MIB.my:22:29: error: VRRPV3-MIB: unresolved import: "InetAddress" from "INET-ADDRESS-MIB" (module_not_found) [import-module-not-found]
+    hint: INET-ADDRESS-MIB is not in any MIB folder (searched: corpus/ietf). Get the MIB file from the vendor and add its folder to the MIB folders (Settings in the GUI, -M on the command line).
 corpus/ietf/VRRPV3-MIB.my:26:7: minor: VRRPV3-MIB: revision for LAST-UPDATED 201202130000Z is missing [revision-last-updated]
 corpus/ietf/VRRPV3-MIB.my:125:23: error: VRRPV3-MIB: unresolved INDEX: "vrrpv3OperationsEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:173:25: error: VRRPV3-MIB: unresolved type: "vrrpv3OperationsInetAddrType" references unknown type "InetAddressType" [type-unknown]
+    hint: InetAddressType is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:189:25: error: VRRPV3-MIB: unresolved type: "vrrpv3OperationsMasterIpAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:203:25: error: VRRPV3-MIB: unresolved type: "vrrpv3OperationsPrimaryIpAddr" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:424:23: error: VRRPV3-MIB: unresolved INDEX: "vrrpv3AssociatedIpAddrEntry" references unknown object "ifIndex" [index-unresolved]
+    hint: ifIndex is imported FROM IF-MIB, but that import failed; fix the IMPORTS first.
 corpus/ietf/VRRPV3-MIB.my:440:25: error: VRRPV3-MIB: unresolved type: "vrrpv3AssociatedIpAddrAddress" references unknown type "InetAddress" [type-unknown]
+    hint: InetAddress is imported FROM INET-ADDRESS-MIB, but that import failed; fix the IMPORTS first.
 31 modules checked: 295 errors, 14 warnings

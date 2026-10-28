@@ -1,0 +1,24 @@
+-- An SMIv2 module (it has a MODULE-IDENTITY) that still uses SMIv1 forms.
+HINT-SMIV1-IN-SMIV2-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises
+        FROM SNMPv2-SMI;
+
+hintSmiv1Mib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Mixes SMIv1 into SMIv2."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99995 }
+
+oldAccess OBJECT-TYPE
+    SYNTAX      INTEGER (0..100)
+    ACCESS      read-only
+    STATUS      mandatory
+    DESCRIPTION "Uses ACCESS and STATUS mandatory, which are SMIv1."
+    ::= { hintSmiv1Mib 1 }
+
+END

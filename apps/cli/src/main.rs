@@ -5,13 +5,15 @@
 //! - `ferosnmp mib show <name|oid>...`: everything known about a node.
 //! - `ferosnmp mib tree [<root>]`: the OID tree below a node.
 //! - `ferosnmp mib search <pattern>`: find nodes by name, with `*` and `?`.
+//! - `ferosnmp mib why <symbol>`: how a name resolves, or why it does not.
 //! - `ferosnmp lint <files|dirs>...`: check MIB files and report problems
 //!   with file, line and column.
 //!
 //! Exit codes, so scripts and CI jobs can rely on them:
 //!
 //! - 0: success, or no problems found;
-//! - 1: nothing found (`mib show`, `mib search`), or `lint` found problems;
+//! - 1: nothing found (`mib show`, `mib search`), a name does not resolve
+//!   (`mib why`), or `lint` found problems;
 //! - 2: the command could not run (bad arguments, unreadable files).
 
 #![forbid(unsafe_code)]
@@ -26,6 +28,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use mib_core::Strictness;
 
 use crate::lint::{FailOn, Format};
 use crate::sources::MibSources;
@@ -103,6 +106,25 @@ enum MibCommand {
         /// Pattern such as `if*Octets`, or `IF-MIB::*` to search one module.
         pattern: String,
     },
+
+    /// Explain how a name resolves, or why it does not: the module's own
+    /// definitions, its IMPORTS, the fallbacks the strictness allows, and
+    /// every module that defines the name.
+    Why {
+        /// `MODULE::name` to follow a reference written in MODULE (as the
+        /// loader does), or just `name` to list every definition.
+        #[arg(value_name = "[MODULE::]SYMBOL")]
+        symbol: String,
+
+        /// Resolve as `ferosnmp lint` does (normal strictness) instead of
+        /// permissively, as the browser does.
+        #[arg(long)]
+        lint: bool,
+
+        /// Resolve with strict rules: no fallbacks at all.
+        #[arg(long, conflicts_with = "lint")]
+        strict: bool,
+    },
 }
 
 /// How a command ended, when it did run.
@@ -168,11 +190,17 @@ fn main() -> ExitCode {
 fn run(command: Command, out: &mut impl Write) -> Result<Status, CliError> {
     match command {
         Command::Mib { sources, command } => {
-            let set = sources.load()?;
+            let strictness = match &command {
+                MibCommand::Why { strict: true, .. } => Strictness::Strict,
+                MibCommand::Why { lint: true, .. } => Strictness::Normal,
+                _ => Strictness::Permissive,
+            };
+            let set = sources.load_with(strictness)?;
             match command {
                 MibCommand::Show { queries } => mib::show(&set, &queries, out),
                 MibCommand::Tree { root, depth } => mib::tree(&set, root.as_deref(), depth, out),
                 MibCommand::Search { pattern } => mib::search(&set, &pattern, out),
+                MibCommand::Why { symbol, .. } => mib::why(&set, &symbol, out),
             }
         }
         Command::Lint {
