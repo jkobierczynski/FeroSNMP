@@ -48,6 +48,25 @@ cargo run --release -p ferosnmp-gui --target-dir target\windows
   the previous one, **Esc** back to the tree.
 - Drag the bars between the panes to resize them.
 
+### Diagnostics
+
+The **Diagnostics** tab at the bottom lists every problem found while
+loading, errors first, with a fix hint where FeroSNMP has one.
+
+- **Click** a row to show the MIB source with the problem highlighted;
+  **double-click** or **Enter** also brings that window to the front. The
+  source window follows along as you move through the list.
+- **Ctrl+W** (or **Edit > Why this symbol?**, or the button in the source
+  window) explains how the name in the selected diagnostic, or the selected
+  tree node, is resolved: which modules define it, what the `IMPORTS` say,
+  and why it fails. This is the same report as `ferosnmp mib why`.
+- **Ctrl+E** (**File > Export diagnostics**) saves the list as text or JSON,
+  in the same formats as `ferosnmp lint`.
+- **Drop** MIB files or folders on the window to load them too, for this
+  session only (they are not added to the settings).
+- Edit a MIB in another program and switch back: FeroSNMP notices the file
+  changed and loads the MIBs again, staying on the same diagnostic.
+
 To try it with the test corpus, run `corpus/fetch.sh` once (from WSL or Git
 Bash), then add the repository's `corpus` folder in Settings.
 
@@ -61,7 +80,10 @@ Bash), then add the repository's `corpus` folder in Settings.
 | `src/find.rs` | The search box logic. |
 | `src/node_info.rs` | What the details pane shows for a node. |
 | `src/loading.rs` | Loading MIBs on a background thread. |
-| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, Settings dialog. |
+| `src/diagnostics.rs` | The Diagnostics list's rows and columns, and the export formats. |
+| `src/rich_text.rs` | MIB source as coloured RTF for the source window. |
+| `src/file_stamps.rs` | Noticing loaded files that changed on disk. |
+| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, Diagnostics tab, source and "why" windows, Settings dialog. |
 
 Everything outside `src/ui/` is plain Rust and is tested on every platform
 (`cargo test -p ferosnmp-gui`). The Win32 helpers that are not specific to

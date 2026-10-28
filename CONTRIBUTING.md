@@ -104,3 +104,32 @@ Every pull request must pass these checks:
 Two more jobs run but are not required: **Build and test (Linux)** (also
 builds the docs) and **Full MIB corpus** (downloads the vendor MIBs, so it
 depends on vendor sites being reachable).
+
+## Releases
+
+Releases are built by `.github/workflows/release.yml` when a tag such as
+`v0.1.0` is pushed. It checks that the tag matches `version` in the root
+`Cargo.toml`, runs the tests on Windows and Linux, and publishes a GitHub
+release with:
+
+- `ferosnmp-vX.Y.Z-windows-x64.zip`: `ferosnmp.exe` and `ferosnmp-gui.exe`
+  (the C runtime is linked in, so nothing else needs installing);
+- `ferosnmp-vX.Y.Z-linux-x64.tar.gz`: the `ferosnmp` command-line tool;
+- `SHA256SUMS`: the SHA-256 checksum of each archive.
+
+The release notes are the version's section of `CHANGELOG.md`. To make a
+release:
+
+1. Set the version in `Cargo.toml` and add its section to `CHANGELOG.md`, in
+   a pull request.
+2. After it is merged, tag the merge commit and push the tag:
+
+   ```sh
+   git checkout main && git pull
+   git tag -a v0.1.0 -m "FeroSNMP 0.1.0"
+   git push origin v0.1.0
+   ```
+
+To check a download on Windows, compare the output of
+`Get-FileHash ferosnmp-v0.1.0-windows-x64.zip` with its line in `SHA256SUMS`
+(`sha256sum -c SHA256SUMS` does all of them on Linux).
