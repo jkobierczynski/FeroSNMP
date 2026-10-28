@@ -11,6 +11,7 @@ use crate::details::{IndexPart, NodeDetails, NodeKind, Syntax};
 use crate::diagnostic::Diagnostic;
 use crate::library::Strictness;
 use crate::oid::Oid;
+use crate::pattern::Pattern;
 
 /// Every module loaded from a [`MibLibrary`](crate::MibLibrary), merged into
 /// one OID tree.
@@ -164,6 +165,32 @@ impl MibSet {
             return None;
         }
         Some(Node::new(node))
+    }
+
+    /// Every named node whose name matches `pattern`, in OID order. A
+    /// pattern written as `MODULE::name` is matched against qualified names.
+    pub fn search(&self, pattern: &Pattern) -> Vec<Node<'_>> {
+        let qualified = pattern.is_qualified();
+        let mut matches = Vec::new();
+        // Depth first, children pushed in reverse so they come off the stack
+        // in arc order; that visits the nodes in OID order.
+        let mut stack = vec![self.root()];
+        while let Some(node) = stack.pop() {
+            if !node.name().is_empty() {
+                let matched = if qualified {
+                    pattern.matches(&node.qualified_name())
+                } else {
+                    pattern.matches(node.name())
+                };
+                if matched {
+                    matches.push(node);
+                }
+            }
+            let first_child = stack.len();
+            stack.extend(node.children());
+            stack[first_child..].reverse();
+        }
+        matches
     }
 
     /// Format an OID for display as `MODULE::name.suffix`, such as

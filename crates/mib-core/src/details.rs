@@ -329,3 +329,56 @@ pub struct NodeDetails {
     /// `REFERENCE` text.
     pub reference: Option<String>,
 }
+
+impl NodeDetails {
+    /// The INDEX as written in a MIB, such as `testPortSlot, IMPLIED testPortName`.
+    /// Empty when the node has no index.
+    pub fn index_text(&self) -> String {
+        self.index
+            .iter()
+            .map(|part| {
+                if part.implied {
+                    format!("IMPLIED {}", part.name)
+                } else {
+                    part.name.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+/// Split a DESCRIPTION or REFERENCE text into lines for display.
+///
+/// MIB files indent continuation lines to line up with the opening quote; that
+/// common indentation is removed, as is trailing white space. Blank lines are
+/// kept (as empty strings), so paragraphs stay apart.
+///
+/// ```
+/// let text = "The textual description.\n            Second line.\n\n              Indented more.";
+/// assert_eq!(
+///     mib_core::text_lines(text),
+///     ["The textual description.", "Second line.", "", "  Indented more."],
+/// );
+/// ```
+pub fn text_lines(text: &str) -> Vec<&str> {
+    let lines: Vec<&str> = text.lines().collect();
+    let indent = lines
+        .iter()
+        .skip(1)
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| line.len() - line.trim_start().len())
+        .min()
+        .unwrap_or(0);
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            if i == 0 {
+                line.trim()
+            } else {
+                line.get(indent..).unwrap_or(line.trim_start()).trim_end()
+            }
+        })
+        .collect()
+}

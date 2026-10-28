@@ -2,9 +2,8 @@
 
 use std::io::Write;
 
-use mib_core::{MibSet, Node, NodeDetails, NodeKind, Oid};
+use mib_core::{MibSet, Node, NodeKind, Oid, Pattern};
 
-use crate::wildcard::Pattern;
 use crate::{CliError, Status};
 
 /// Width of the labels in `mib show`, so the values line up.
@@ -67,7 +66,7 @@ fn write_details(
     field("Units", details.units.as_deref().unwrap_or(""))?;
     field("Access", details.access.map_or("", |a| a.as_str()))?;
     field("Status", details.status.map_or("", |s| s.as_str()))?;
-    field("Index", &index_text(&details))?;
+    field("Index", &details.index_text())?;
     field("Augments", details.augments.as_deref().unwrap_or(""))?;
     field("Also defined", &other_definitions(set, query, node))?;
 
@@ -102,22 +101,6 @@ fn instance_suffix(set: &MibSet, query: &str, node_oid: &Oid) -> Option<String> 
     Some(suffix.iter().map(|arc| format!(".{arc}")).collect())
 }
 
-/// `testPortSlot, IMPLIED testPortName`
-fn index_text(details: &NodeDetails) -> String {
-    details
-        .index
-        .iter()
-        .map(|part| {
-            if part.implied {
-                format!("IMPLIED {}", part.name)
-            } else {
-                part.name.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 /// Other modules that define the same name, when the query did not say which
 /// module it meant.
 fn other_definitions(set: &MibSet, query: &str, node: Node<'_>) -> String {
@@ -133,24 +116,8 @@ fn other_definitions(set: &MibSet, query: &str, node: Node<'_>) -> String {
 }
 
 /// Print a DESCRIPTION or REFERENCE text indented under its label.
-///
-/// MIB files indent continuation lines to line up with the opening quote, so
-/// that common indentation is removed first.
 fn write_block(text: &str, out: &mut impl Write) -> std::io::Result<()> {
-    let lines: Vec<&str> = text.lines().collect();
-    let indent = lines
-        .iter()
-        .skip(1)
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| line.len() - line.trim_start().len())
-        .min()
-        .unwrap_or(0);
-    for (i, line) in lines.iter().enumerate() {
-        let line = if i == 0 {
-            line.trim()
-        } else {
-            line.get(indent..).unwrap_or(line.trim_start()).trim_end()
-        };
+    for line in mib_core::text_lines(text) {
         if line.is_empty() {
             writeln!(out)?;
         } else {
@@ -240,27 +207,7 @@ fn write_tree_line(node: Node<'_>, level: usize, out: &mut impl Write) -> std::i
 /// `ferosnmp mib search`: print every node whose name matches, in OID order.
 /// A pattern with `::` is matched against `MODULE::name`.
 pub fn search(set: &MibSet, pattern: &str, out: &mut impl Write) -> Result<Status, CliError> {
-    let compiled = Pattern::new(pattern);
-    let qualified = pattern.contains("::");
-
-    let mut matches: Vec<Node<'_>> = Vec::new();
-    let mut stack: Vec<Node<'_>> = vec![set.root()];
-    while let Some(node) = stack.pop() {
-        if !node.name().is_empty() {
-            let text = if qualified {
-                node.qualified_name()
-            } else {
-                node.name().to_string()
-            };
-            if compiled.matches(&text) {
-                matches.push(node);
-            }
-        }
-        let mut children: Vec<_> = node.children().collect();
-        children.reverse();
-        stack.extend(children);
-    }
-
+    let matches = set.search(&Pattern::new(pattern));
     if matches.is_empty() {
         eprintln!("ferosnmp: no names match {pattern:?}");
         return Ok(Status::Problems);

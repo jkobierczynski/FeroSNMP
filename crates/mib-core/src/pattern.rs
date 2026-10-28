@@ -1,7 +1,14 @@
-//! Simple wildcard patterns for `mib search`: `*` matches any text (also
+//! Simple wildcard patterns for searching names: `*` matches any text (also
 //! none) and `?` matches exactly one character. Case is ignored.
 
-/// A compiled search pattern.
+/// A compiled search pattern, as used by [`MibSet::search`](crate::MibSet::search).
+///
+/// ```
+/// use mib_core::Pattern;
+///
+/// assert!(Pattern::new("if*Octets").matches("ifInOctets"));
+/// assert!(Pattern::new("descr").matches("sysDescr"));
+/// ```
 #[derive(Debug, Clone)]
 pub struct Pattern {
     /// The pattern in lower case, as characters.
@@ -19,6 +26,13 @@ impl Pattern {
         Pattern {
             chars: text.chars().collect(),
         }
+    }
+
+    /// True if the pattern was written as `MODULE::name` and should be
+    /// matched against qualified names.
+    pub fn is_qualified(&self) -> bool {
+        // `::` cannot appear in a plain name, so its presence is enough.
+        self.chars.windows(2).any(|pair| pair == [':', ':'])
     }
 
     /// True if the whole of `text` matches the pattern.

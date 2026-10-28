@@ -1,15 +1,30 @@
 //! FeroSNMP native Windows GUI.
 //!
-//! A placeholder until milestone M3, when the Win32 main window arrives. The
-//! GUI only targets Windows; on other platforms this binary just says so, so
-//! that `cargo build --workspace` still works on Linux and macOS.
+//! The window code (in `ui`) only exists on Windows. The modules it uses for
+//! settings, searching and the details pane are plain Rust, so they are built
+//! and unit tested on every platform. On Linux and macOS this binary only says
+//! that it needs Windows, so `cargo build --workspace` still works there.
 
 // Release builds on Windows are GUI-subsystem programs (no console window).
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+// Outside Windows, nothing calls the shared modules except their tests.
+#![cfg_attr(not(windows), allow(dead_code))]
+
+/// Version of the program, for the About box.
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+mod find;
+mod loading;
+mod node_info;
+mod settings;
+#[cfg(test)]
+mod test_support;
+#[cfg(windows)]
+mod ui;
 
 #[cfg(windows)]
 fn main() {
-    // The Win32 message loop arrives in M3.
+    ui::run();
 }
 
 #[cfg(not(windows))]
