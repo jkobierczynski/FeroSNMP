@@ -7,7 +7,7 @@
 | `crates/mib-core` | Loads MIB libraries and answers "what is this OID/name?". Wraps [mib-rs](https://docs.rs/mib-rs/0.10.0). |
 | `crates/snmp-core` | Async SNMP engine (from milestone M5). |
 | `crates/trap-rx` | Trap and INFORM receiver (from milestone M9). |
-| `apps/cli` | The `ferosnmp` command-line tool. |
+| `apps/cli` | The `ferosnmp` command-line tool. See [apps/cli/README.md](apps/cli/README.md). |
 | `apps/gui` | The Win32 GUI (Windows only, from milestone M3). |
 | `corpus/` | Real-world MIBs the loader is tested against. See [corpus/README.md](corpus/README.md). |
 | `fuzz/` | Fuzz targets, run with `cargo fuzz`. |
@@ -54,6 +54,10 @@ cargo insta test --accept -p mib-core
 ```
 
 Then review the changed `.snap` files in your diff like any other change.
+
+The command-line tool has snapshot tests too (`apps/cli/tests/cli.rs`): the
+output of `ferosnmp lint corpus/ietf` and of the `mib` commands. Accept
+intended changes with `cargo insta test --accept -p ferosnmp-cli`.
 
 ## Dependencies and licences
 

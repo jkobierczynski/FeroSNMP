@@ -29,6 +29,9 @@ trap-rx = { path = "crates/trap-rx" }
 mib-rs = { version = "=0.10.0", default-features = false }
 thiserror = "2"
 insta = "1"
+# Used only by the CLI: argument parsing and JSON output.
+clap = { version = "4.6", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

@@ -1,0 +1,7 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+crates/mib-core/tests/fixtures/misnamed-test.mib:30:1: style: FEROSNMP-TEST-MIB: testTemperature: differs from TestTemperature only in case [identifier-case-match]
+crates/mib-core/tests/fixtures/misnamed-test.mib:115:1: warning: FEROSNMP-TEST-MIB: notification testOverheat is not reverse mappable [notification-not-reversible]
+1 module checked: 0 errors, 2 warnings

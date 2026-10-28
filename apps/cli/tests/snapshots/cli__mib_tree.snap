@@ -1,0 +1,18 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+ferosnmpTestMib(99999)  1.3.6.1.4.1.99999  [module-identity]
+  testObjects(1)
+    testTemperature(1)  [scalar]
+    testMode(2)  [scalar]
+    testPortTable(3)  [table]
+      testPortEntry(1)  [row]
+        testPortSlot(1)  [column]
+        testPortName(2)  [column]
+        testPortStatus(3)  [column]
+    testPortStatsTable(4)  [table]
+      testPortStatsEntry(1)  [row]
+        testPortErrors(1)  [column]
+  testNotifications(2)
+    testOverheat(1)  [notification]

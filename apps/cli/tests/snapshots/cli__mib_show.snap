@@ -1,0 +1,37 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+FEROSNMP-TEST-MIB::testTemperature
+  OID           1.3.6.1.4.1.99999.1.1
+  Kind          scalar
+  Type          TestTemperature -> Integer32 -> INTEGER
+  Display hint  d-1
+  Range         -400..1250
+  Units         0.1 degrees Celsius
+  Access        read-only
+  Status        current
+  Description
+    Current temperature.
+
+FEROSNMP-TEST-MIB::testPortEntry
+  OID           1.3.6.1.4.1.99999.1.3.1
+  Kind          row
+  Access        not-accessible
+  Status        current
+  Index         testPortSlot, IMPLIED testPortName
+  Description
+    One port.
+
+FEROSNMP-TEST-MIB::testPortName
+  OID           1.3.6.1.4.1.99999.1.3.1.2
+  Instance      .1.3.102.111.111
+  Kind          column
+  Type          DisplayString -> OCTET STRING
+  Display hint  255a
+  Size          SIZE (1..32)
+  Access        not-accessible
+  Status        current
+  Index         testPortSlot, IMPLIED testPortName
+  Description
+    Port name.
