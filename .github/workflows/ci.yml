@@ -102,9 +102,11 @@ jobs:
         run: |
           mkdir -p fuzz/corpus/load_module
           cp corpus/ietf/* fuzz/corpus/load_module/
+      # The prebuilt cargo-fuzz is a musl binary and would default to the musl
+      # target, which nightly has no sanitizer-ready std for; ask for glibc.
       - name: Fuzz for 60 seconds
         run: >
-          cargo +nightly fuzz run load_module --
+          cargo +nightly fuzz run --target x86_64-unknown-linux-gnu load_module --
           -max_total_time=60 -max_len=131072 -timeout=10 -rss_limit_mb=2048
       - name: Keep the input that failed
         if: failure()
