@@ -1,0 +1,43 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/mib-core",
+    "crates/snmp-core",
+    "crates/trap-rx",
+    "apps/cli",
+    "apps/gui",
+]
+# The fuzz crate needs nightly and libFuzzer, so it is built on its own with
+# `cargo +nightly fuzz` rather than as part of the workspace.
+exclude = ["fuzz"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/jkobierczynski/ferosnmp"
+publish = false
+
+[workspace.dependencies]
+mib-core = { path = "crates/mib-core" }
+snmp-core = { path = "crates/snmp-core" }
+trap-rx = { path = "crates/trap-rx" }
+
+# mib-rs is pre-1.0 and may break its API in any minor release, so it is pinned
+# to an exact version and only used inside mib-core.
+mib-rs = { version = "=0.10.0", default-features = false }
+thiserror = "2"
+insta = "1"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Snapshot files are compared byte for byte by the tests; keep LF everywhere.
+*.snap text eol=lf
