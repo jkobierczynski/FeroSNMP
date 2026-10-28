@@ -19,7 +19,6 @@
 mod lint;
 mod mib;
 mod sources;
-mod wildcard;
 
 use std::fmt;
 use std::io::{self, BufWriter, Write};

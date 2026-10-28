@@ -8,7 +8,8 @@
 | `crates/snmp-core` | Async SNMP engine (from milestone M5). |
 | `crates/trap-rx` | Trap and INFORM receiver (from milestone M9). |
 | `apps/cli` | The `ferosnmp` command-line tool. See [apps/cli/README.md](apps/cli/README.md). |
-| `apps/gui` | The Win32 GUI (Windows only, from milestone M3). |
+| `crates/fero-win32` | Small Win32 helpers shared by the Fero tools: window classes, DPI, fonts, splitters, dialogs. |
+| `apps/gui` | The Win32 GUI (Windows only). See [apps/gui/README.md](apps/gui/README.md). |
 | `corpus/` | Real-world MIBs the loader is tested against. See [corpus/README.md](corpus/README.md). |
 | `fuzz/` | Fuzz targets, run with `cargo fuzz`. |
 
@@ -26,7 +27,14 @@ cargo clippy --workspace --all-targets -- -D warnings   # lint, as CI does
 ```
 
 The GUI only builds into a real program on Windows. On Linux and macOS the
-`ferosnmp-gui` binary is a stub, so `cargo build --workspace` works everywhere.
+`ferosnmp-gui` binary is a stub, so `cargo build --workspace` works everywhere,
+and the GUI's settings, search and details code is still tested there. To
+check that the Windows-only code compiles from Linux:
+
+```sh
+rustup target add x86_64-pc-windows-msvc
+cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+```
 
 ## The MIB corpus
 

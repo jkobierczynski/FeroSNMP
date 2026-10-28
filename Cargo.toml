@@ -4,6 +4,7 @@ members = [
     "crates/mib-core",
     "crates/snmp-core",
     "crates/trap-rx",
+    "crates/fero-win32",
     "apps/cli",
     "apps/gui",
 ]
@@ -23,6 +24,7 @@ publish = false
 mib-core = { path = "crates/mib-core" }
 snmp-core = { path = "crates/snmp-core" }
 trap-rx = { path = "crates/trap-rx" }
+fero-win32 = { path = "crates/fero-win32" }
 
 # mib-rs is pre-1.0 and may break its API in any minor release, so it is pinned
 # to an exact version and only used inside mib-core.
@@ -32,6 +34,12 @@ insta = "1"
 # Used only by the CLI: argument parsing and JSON output.
 clap = { version = "4.6", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+# Used only by the GUI: Win32 bindings, the application manifest, and the
+# settings file.
+windows = "0.62"
+embed-manifest = "1.5"
+serde = { version = "1", features = ["derive"] }
+toml = "1.1"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
@@ -44,3 +52,4 @@ all = { level = "warn", priority = -1 }
 [profile.release]
 lto = "thin"
 codegen-units = 1
+

@@ -16,6 +16,7 @@
 //! - A [`Node`] is one point in the OID tree. [`Node::details`] returns
 //!   everything a details pane shows: OID, module, kind, type chain, access,
 //!   status, units, enums, ranges and INDEX.
+//! - [`MibSet::search`] finds nodes by name with `*` and `?` wildcards.
 //! - Problems in the MIB files are collected as [`Diagnostic`]s with file,
 //!   line and column instead of stopping the load.
 //!
@@ -47,16 +48,18 @@ mod diagnostic;
 mod error;
 mod library;
 mod oid;
+mod pattern;
 mod set;
 
 pub use details::{
     Access, BaseType, IndexPart, NamedNumber, NodeDetails, NodeKind, Range, RangeBound, Status,
-    Syntax,
+    Syntax, text_lines,
 };
 pub use diagnostic::{Diagnostic, Location, Severity};
 pub use error::LoadError;
 pub use library::{MibLibrary, ModuleFile, SourceKind, Strictness, load_module_text};
 pub use oid::{Oid, ParseOidError};
+pub use pattern::Pattern;
 pub use set::{InstanceLookup, MibSet, ModuleInfo, Node, NodeId, SmiVersion};
 
 /// Version of this crate, for "about" boxes and bug reports.
