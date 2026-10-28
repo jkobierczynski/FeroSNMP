@@ -1,0 +1,19 @@
+[package]
+name = "mib-core"
+description = "Loads SNMP MIB libraries and answers questions about OIDs and names; the MIB layer of FeroSNMP"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+mib-rs.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

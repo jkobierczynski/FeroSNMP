@@ -1,0 +1,20 @@
+[package]
+name = "ferosnmp-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+mib-core = { path = "../crates/mib-core" }
+
+[[bin]]
+name = "load_module"
+path = "fuzz_targets/load_module.rs"
+test = false
+doc = false
+bench = false

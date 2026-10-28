@@ -1,0 +1,18 @@
+[package]
+name = "ferosnmp-gui"
+description = "FeroSNMP native Windows GUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "ferosnmp-gui"
+path = "src/main.rs"
+
+[dependencies]
+
+[lints]
+workspace = true

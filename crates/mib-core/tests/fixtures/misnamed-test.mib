@@ -1,0 +1,121 @@
+-- A small module exercising what NodeDetails reports. The file is deliberately
+-- not named after the module: vendor files often are not, and the loader must
+-- find modules by the name on the DEFINITIONS line.
+FEROSNMP-TEST-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
+    Integer32, Unsigned32, enterprises
+        FROM SNMPv2-SMI
+    TEXTUAL-CONVENTION, DisplayString, RowStatus
+        FROM SNMPv2-TC;
+
+ferosnmpTestMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Test module for mib-core."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99999 }
+
+TestTemperature ::= TEXTUAL-CONVENTION
+    DISPLAY-HINT "d-1"
+    STATUS       current
+    DESCRIPTION  "A temperature in tenths of a degree Celsius."
+    SYNTAX       Integer32 (-400..1250)
+
+testObjects OBJECT IDENTIFIER ::= { ferosnmpTestMib 1 }
+
+testTemperature OBJECT-TYPE
+    SYNTAX      TestTemperature
+    UNITS       "0.1 degrees Celsius"
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Current temperature."
+    ::= { testObjects 1 }
+
+testMode OBJECT-TYPE
+    SYNTAX      INTEGER { off(0), standby(1), on(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION "Operating mode."
+    ::= { testObjects 2 }
+
+testPortTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF TestPortEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Ports, indexed by slot and by name."
+    ::= { testObjects 3 }
+
+testPortEntry OBJECT-TYPE
+    SYNTAX      TestPortEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "One port."
+    INDEX       { testPortSlot, IMPLIED testPortName }
+    ::= { testPortTable 1 }
+
+TestPortEntry ::= SEQUENCE {
+    testPortSlot    Unsigned32,
+    testPortName    DisplayString,
+    testPortStatus  RowStatus
+}
+
+testPortSlot OBJECT-TYPE
+    SYNTAX      Unsigned32 (1..16)
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Slot number."
+    ::= { testPortEntry 1 }
+
+testPortName OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (1..32))
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Port name."
+    ::= { testPortEntry 2 }
+
+testPortStatus OBJECT-TYPE
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION "Row status."
+    ::= { testPortEntry 3 }
+
+testPortStatsTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF TestPortStatsEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Statistics per port, one row for each testPortEntry."
+    ::= { testObjects 4 }
+
+testPortStatsEntry OBJECT-TYPE
+    SYNTAX      TestPortStatsEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Statistics for one port."
+    AUGMENTS    { testPortEntry }
+    ::= { testPortStatsTable 1 }
+
+TestPortStatsEntry ::= SEQUENCE {
+    testPortErrors  Integer32
+}
+
+testPortErrors OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Error count."
+    ::= { testPortStatsEntry 1 }
+
+testNotifications OBJECT IDENTIFIER ::= { ferosnmpTestMib 2 }
+
+testOverheat NOTIFICATION-TYPE
+    OBJECTS     { testTemperature }
+    STATUS      current
+    DESCRIPTION "Sent when the temperature is too high."
+    ::= { testNotifications 1 }
+
+END

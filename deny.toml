@@ -1,0 +1,65 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+# Run locally with `cargo deny check`.
+
+[graph]
+# Check the dependencies of every platform we ship for, not just the host.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+]
+all-features = true
+
+[advisories]
+# RustSec advisories. Unmaintained crates are reported for direct and
+# transitive dependencies alike.
+unmaintained = "all"
+yanked = "deny"
+ignore = []
+
+[licenses]
+# FeroSNMP is GPL-3.0-or-later, so every dependency must be under a licence
+# that can be combined with GPL-3.0. Add to this list only after checking
+# that a licence is GPL-3.0 compatible.
+allow = [
+    "GPL-3.0-or-later",
+    "GPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "CC0-1.0",
+    "0BSD",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# Our own crates are not published, so they need no licence check.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies inside the workspace have no version; that is fine.
+allow-wildcard-paths = true
+# OpenSSL is not used: the decision between pure-Rust crypto and OpenSSL
+# (needed for SNMPv3 in M7) is still open, so nothing may pull it in by accident.
+deny = [
+    { crate = "openssl-sys", reason = "crypto backend not decided yet (M7)" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

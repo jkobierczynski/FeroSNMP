@@ -1,0 +1,5 @@
+# Everyone (and CI) builds with the same compiler. Bump deliberately.
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
