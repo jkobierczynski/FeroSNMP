@@ -13,9 +13,12 @@
 /// Version of the program, for the About box.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+mod diagnostics;
+mod file_stamps;
 mod find;
 mod loading;
 mod node_info;
+mod rich_text;
 mod settings;
 #[cfg(test)]
 mod test_support;

@@ -6,14 +6,18 @@
 //! - [`details`]: the properties list and description on the right.
 //! - [`icons`]: the small pictures in the tree, one per kind of node.
 //! - [`settings_dialog`]: the Settings dialog.
+//! - [`diagnostics_panel`]: the Diagnostics tab along the bottom.
+//! - [`text_window`]: the source viewer and the "Why this symbol?" report.
 //!
 //! All windows belong to the one UI thread that runs [`run`]. MIBs are loaded
 //! on another thread (see [`crate::loading`]), which posts the result back.
 
 mod details;
+mod diagnostics_panel;
 mod icons;
 mod main_window;
 mod settings_dialog;
+mod text_window;
 mod toolbar;
 mod tree;
 
@@ -55,6 +59,10 @@ pub mod id {
     pub const TOOLBAR: u16 = 105;
     /// The search box in the rebar.
     pub const SEARCH: u16 = 106;
+    /// The tab control along the bottom.
+    pub const TABS: u16 = 107;
+    /// The Diagnostics list.
+    pub const DIAGNOSTICS: u16 = 108;
 
     /// Enter, from the dialog keyboard handling (the predefined `IDOK`).
     pub const ENTER: u16 = 1;
@@ -64,6 +72,8 @@ pub mod id {
     pub const RELOAD: u16 = 200;
     /// File > Settings.
     pub const SETTINGS: u16 = 201;
+    /// File > Export diagnostics.
+    pub const EXPORT: u16 = 203;
     /// File > Exit.
     pub const EXIT: u16 = 202;
     /// Edit > Find (Ctrl+F): go to the search box.
@@ -72,6 +82,10 @@ pub mod id {
     pub const FIND_NEXT: u16 = 211;
     /// Edit > Find previous (Shift+F3).
     pub const FIND_PREVIOUS: u16 = 212;
+    /// Edit > Why this symbol? (Ctrl+W), also the button in the source viewer.
+    pub const WHY: u16 = 213;
+    /// View > Source of the selected diagnostic (also Enter or a double click).
+    pub const SHOW_SOURCE: u16 = 214;
     /// Help > About.
     pub const ABOUT: u16 = 220;
 }
@@ -115,6 +129,8 @@ fn message_loop(main: HWND) {
         accelerator(FVIRTKEY, VK_F3.0, id::FIND_NEXT),
         accelerator(FSHIFT, VK_F3.0, id::FIND_PREVIOUS),
         accelerator(FVIRTKEY, VK_F5.0, id::RELOAD),
+        accelerator(FCONTROL, u16::from(b'W'), id::WHY),
+        accelerator(FCONTROL, u16::from(b'E'), id::EXPORT),
     ];
     // SAFETY: the standard Win32 message loop on the UI thread.
     unsafe {

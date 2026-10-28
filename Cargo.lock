@@ -201,6 +201,7 @@ dependencies = [
  "fero-win32",
  "mib-core",
  "serde",
+ "serde_json",
  "toml",
  "windows",
 ]

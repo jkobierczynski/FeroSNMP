@@ -15,6 +15,15 @@ pub enum Orientation {
     Horizontal,
 }
 
+/// Which pane keeps its size when the area around the splitter changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pane {
+    /// The left or top pane.
+    First,
+    /// The right or bottom pane, as for a panel along the bottom of a window.
+    Second,
+}
+
 /// A rectangle in client coordinates; `right` and `bottom` are exclusive, as
 /// in Win32's `RECT`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -63,7 +72,9 @@ impl Rect {
 #[derive(Debug, Clone)]
 pub struct Splitter {
     orientation: Orientation,
-    /// Size of the first pane (left or top), before clamping to the area.
+    /// Which pane `position` is the size of.
+    fixed: Pane,
+    /// Size of the fixed pane, before clamping to the area.
     position: i32,
     /// Thickness of the bar.
     thickness: i32,
@@ -74,10 +85,12 @@ pub struct Splitter {
 }
 
 impl Splitter {
-    /// A splitter whose first pane is `position` pixels wide (or high).
+    /// A splitter whose first pane is `position` pixels wide (or high), and
+    /// keeps that size when the area changes.
     pub fn new(orientation: Orientation, position: i32, thickness: i32, min_pane: i32) -> Self {
         Splitter {
             orientation,
+            fixed: Pane::First,
             position,
             thickness,
             min_pane,
@@ -85,12 +98,19 @@ impl Splitter {
         }
     }
 
+    /// Let `pane` keep its size when the area changes instead of the first
+    /// one; `position` is then the size of that pane.
+    pub fn with_fixed_pane(mut self, pane: Pane) -> Self {
+        self.fixed = pane;
+        self
+    }
+
     /// Which way the bar runs.
     pub fn orientation(&self) -> Orientation {
         self.orientation
     }
 
-    /// Size of the first pane as last set, in pixels.
+    /// Size of the fixed pane as last set, in pixels.
     pub fn position(&self) -> i32 {
         self.position
     }
@@ -102,8 +122,8 @@ impl Splitter {
 
     /// Split `area` into the first pane, the bar and the second pane.
     ///
-    /// The first pane keeps its size when the area grows or shrinks, as far
-    /// as the minimum size of the second pane allows.
+    /// The fixed pane keeps its size when the area grows or shrinks, as far
+    /// as the minimum size of the other pane allows.
     pub fn split(&self, area: Rect) -> (Rect, Rect, Rect) {
         let first = self.clamped(area);
         match self.orientation {
@@ -173,11 +193,17 @@ impl Splitter {
             Orientation::Horizontal => y - area.top - grab,
         };
         let old = self.clamped(area);
-        self.position = wanted;
+        let length = self.length(area);
+        let from_first = |first: i32| match self.fixed {
+            Pane::First => first,
+            Pane::Second => length - self.thickness - first,
+        };
+        self.position = from_first(wanted);
         // Store the clamped value, so that dragging past the end and back
         // does not leave the bar stuck at the end.
-        self.position = self.clamped(area);
-        self.position != old
+        let first = self.clamped(area);
+        self.position = from_first(first);
+        first != old
     }
 
     /// Stop dragging (on mouse button up or lost capture).
@@ -194,15 +220,23 @@ impl Splitter {
         self.min_pane = scale(self.min_pane);
     }
 
-    /// The first pane's size, kept between the minimum pane sizes.
-    fn clamped(&self, area: Rect) -> i32 {
-        let length = match self.orientation {
+    fn length(&self, area: Rect) -> i32 {
+        match self.orientation {
             Orientation::Vertical => area.width(),
             Orientation::Horizontal => area.height(),
-        };
+        }
+    }
+
+    /// The first pane's size, kept between the minimum pane sizes.
+    fn clamped(&self, area: Rect) -> i32 {
+        let length = self.length(area);
         let max = (length - self.thickness - self.min_pane).max(0);
         let min = self.min_pane.min(max);
-        self.position.clamp(min, max)
+        let first = match self.fixed {
+            Pane::First => self.position,
+            Pane::Second => length - self.thickness - self.position,
+        };
+        first.clamp(min, max)
     }
 }
 
@@ -265,6 +299,23 @@ mod tests {
         assert_eq!(splitter.position(), 500);
         splitter.end_drag();
         assert!(!splitter.drag(area(), 700, 10), "no drag in progress");
+    }
+
+    #[test]
+    fn a_fixed_second_pane_keeps_its_size() {
+        let mut splitter =
+            Splitter::new(Orientation::Horizontal, 150, 5, 40).with_fixed_pane(Pane::Second);
+        let (top, _, bottom) = splitter.split(Rect::new(0, 0, 100, 500));
+        assert_eq!((top.height(), bottom.height()), (345, 150));
+        let (top, _, bottom) = splitter.split(Rect::new(0, 0, 100, 800));
+        assert_eq!((top.height(), bottom.height()), (645, 150));
+
+        // Dragging the bar up 100 pixels makes the bottom pane 100 higher.
+        assert!(splitter.begin_drag(Rect::new(0, 0, 100, 800), 10, 646));
+        assert!(splitter.drag(Rect::new(0, 0, 100, 800), 10, 546));
+        assert_eq!(splitter.position(), 250);
+        splitter.drag(Rect::new(0, 0, 100, 800), 10, -100);
+        assert_eq!(splitter.position(), 800 - 5 - 40);
     }
 
     #[test]
