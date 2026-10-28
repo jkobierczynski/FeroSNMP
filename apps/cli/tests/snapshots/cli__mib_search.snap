@@ -1,0 +1,12 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+FEROSNMP-TEST-MIB::testPortTable       1.3.6.1.4.1.99999.1.3      table
+FEROSNMP-TEST-MIB::testPortEntry       1.3.6.1.4.1.99999.1.3.1    row
+FEROSNMP-TEST-MIB::testPortSlot        1.3.6.1.4.1.99999.1.3.1.1  column
+FEROSNMP-TEST-MIB::testPortName        1.3.6.1.4.1.99999.1.3.1.2  column
+FEROSNMP-TEST-MIB::testPortStatus      1.3.6.1.4.1.99999.1.3.1.3  column
+FEROSNMP-TEST-MIB::testPortStatsTable  1.3.6.1.4.1.99999.1.4      table
+FEROSNMP-TEST-MIB::testPortStatsEntry  1.3.6.1.4.1.99999.1.4.1    row
+FEROSNMP-TEST-MIB::testPortErrors      1.3.6.1.4.1.99999.1.4.1.1  column

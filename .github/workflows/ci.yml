@@ -65,6 +65,8 @@ jobs:
           key: corpus-${{ hashFiles('corpus/manifest.tsv') }}
       - run: corpus/fetch.sh
       - run: cargo test -p mib-core --test corpus --locked
+      # `ferosnmp lint corpus` against its stored snapshot.
+      - run: cargo test -p ferosnmp-cli --test cli --locked
 
   deny:
     name: cargo deny
