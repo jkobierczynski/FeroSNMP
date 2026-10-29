@@ -1,0 +1,34 @@
+---
+source: apps/cli/tests/agent.rs
+expression: "output.replace(&agent, \"AGENT\")"
+---
+FEROSNMP-TEST-MIB::fstContact.0 = STRING: "FeroSNMP tests"
+FEROSNMP-TEST-MIB::fstMode.0 = INTEGER: auto(3)
+FEROSNMP-TEST-MIB::fstLimit.0 = INTEGER: 75 percent
+FEROSNMP-TEST-MIB::fstGateway.0 = IpAddress: 192.0.2.10
+FEROSNMP-TEST-MIB::fstMacAddress.0 = STRING: "00:1b:21:0a:ff:0a"
+FEROSNMP-TEST-MIB::fstOptions.0 = BITS: 80 40 alpha(0) delta(9)
+FEROSNMP-TEST-MIB::fstTarget.0 = OID: FEROSNMP-TEST-MIB::fstTable
+FEROSNMP-TEST-MIB::fstThreshold.0 = Gauge32: 999
+FEROSNMP-TEST-MIB::fstMode.0 = INTEGER: on(2)
+FEROSNMP-TEST-MIB::fstLimit.0 = INTEGER: 0 percent
+--
+ferosnmp: FEROSNMP-TEST-MIB::fstMode.0: "maybe" is not one of off(1), on(2), auto(3) (or a number)
+ferosnmp: hint: allowed: off(1), on(2), auto(3)
+ferosnmp: FEROSNMP-TEST-MIB::fstLimit.0: 101 is outside the allowed range 0..100
+ferosnmp: hint: use --force to send it anyway
+ferosnmp: FEROSNMP-TEST-MIB::fstContact.0: 37 bytes is not an allowed size (SIZE 0..32)
+ferosnmp: hint: use --force to send it anyway
+ferosnmp: FEROSNMP-TEST-MIB::fstMacAddress.0: 2 bytes is not an allowed size (SIZE 6)
+ferosnmp: hint: use --force to send it anyway
+ferosnmp: FEROSNMP-TEST-MIB::fstOptions.0: "epsilon" is not one of the bits alpha(0), beta(1), gamma(2), delta(9)
+ferosnmp: hint: allowed: bits alpha(0), beta(1), gamma(2), delta(9)
+ferosnmp: FEROSNMP-TEST-MIB::fstStatus.0 is read-only in the MIB, so the agent will refuse to change it
+ferosnmp: hint: use --force to send it anyway
+--
+ferosnmp: AGENT answered wrongValue(10) for FEROSNMP-TEST-MIB::fstLimit.0
+ferosnmp: hint: the agent does not accept this value, although its type is right: it may support fewer values or a smaller range than the MIB allows
+ferosnmp: AGENT answered noAccess(6) for FEROSNMP-TEST-MIB::fstStatus.0
+ferosnmp: hint: the agent does not let this community or user write here. A read-only community cannot SET (net-snmp needs `rwcommunity` or `rwuser`, not `rocommunity`), and many agents keep objects read-only that the MIB calls read-write
+ferosnmp: AGENT answered noAccess(6) for FEROSNMP-TEST-MIB::fstLimit.0
+ferosnmp: hint: the agent does not let this community or user write here. A read-only community cannot SET (net-snmp needs `rwcommunity` or `rwuser`, not `rocommunity`), and many agents keep objects read-only that the MIB calls read-write

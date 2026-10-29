@@ -299,7 +299,6 @@ pub fn index_text(column: &IndexColumn, value: &IndexValue, formatter: &Formatte
             hint.and_then(|hint| display_hint::format_integer(hint, n))
                 .unwrap_or_else(|| n.to_string())
         }
-        IndexValue::Octets(bytes) if bytes.is_empty() => "\"\"".to_string(),
         IndexValue::Octets(bytes) => {
             if syntax.map(|s| s.base_type) != Some(BaseType::Bits)
                 && let Some(text) = hint.and_then(|hint| display_hint::format_octets(hint, bytes))

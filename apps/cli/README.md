@@ -117,9 +117,9 @@ IPv6 with a port as `[2001:db8::1]:161`). Objects are names (`sysDescr`),
 | `-n` | | Numeric OIDs instead of names |
 | `--raw` | | Numeric OIDs, the ASN.1 tag and type, and the value's bytes in hex |
 | `--log` | | Print each request, its request-id, retries and timing to standard error |
-| `--max-repetitions N` | `10` | Values per GETBULK request (`bulk`, `walk`) |
+| `--max-repetitions N` | `10` | Values per GETBULK request (`bulk`, `walk`, `table`) |
 | `--non-repeaters N` | `0` | `bulk`: how many of the first objects get one value only |
-| `--no-bulk` | | `walk`: use GETNEXT also with SNMPv2c |
+| `--no-bulk` | | `walk`, `table`: use GETNEXT also with SNMPv2c |
 
 Output looks like net-snmp's, with the loaded MIBs used for names, enum
 labels, BITS, display hints and units:
@@ -138,13 +138,76 @@ or, with an error, when the agent returns an OID that is not greater than
 the previous one (a broken agent would otherwise loop forever). Walking a
 single instance (`walk host sysDescr.0`) fetches it with GET.
 
+## Tables
+
+`table` walks a table and prints it as rows and columns. The instance part
+of each OID is split into the table's INDEX values (RFC 2578, 7.7), also
+when the INDEX has several parts, uses `IMPLIED`, or comes from another
+row through `AUGMENTS`:
+
+```sh
+ferosnmp table 192.0.2.1 ifTable
+ferosnmp table 192.0.2.1 ifXTable                   # AUGMENTS ifEntry: indexed by ifIndex
+ferosnmp table 192.0.2.1 ipNetToMediaTable --format csv > arp.csv
+```
+
+```text
+ipNetToMediaIfIndex  ipNetToMediaNetAddress  ipNetToMediaPhysAddress  ipNetToMediaType
+2                    192.0.2.1               02:fc:00:00:00:05        dynamic(3)
+2                    192.0.2.254             00:1b:21:0a:ff:09        static(4)
+```
+
+The index columns come first, then every column the agent returns values
+for. The table, its row or any of its columns can be named. A row whose
+instance does not fit the INDEX (a broken agent, or a MIB that does not
+match the agent) is shown with its raw instance (`?.1.192.0.2.300`) and a
+note that says which index part is wrong, and the exit code is 1.
+
+## Writing values
+
+`set` writes one or more values in one SET request, so the agent sets all
+of them or none. Each value is read with the object's type from the MIB,
+written the way the tool shows values:
+
+```sh
+ferosnmp set 192.0.2.1 -c private sysContact.0 "Jurgen" sysLocation.0 "Lab 2"
+ferosnmp set 192.0.2.1 -c private ifAdminStatus.3 down
+ferosnmp set 192.0.2.1 -u admin -a SHA-256 -A "auth pass" -X "priv pass" ifAlias.3 "uplink"
+```
+
+| MIB type | Write it as |
+|----------|-------------|
+| enumeration | the label (`down`), `down(2)`, or the number |
+| INTEGER with a DISPLAY-HINT such as `d-1` | as shown: `-12.5` |
+| OCTET STRING | text; with a DISPLAY-HINT as shown: `00:1b:21:0a:ff:09`, `2026-10-29,13:45:30.5` |
+| BITS | bit names or numbers: `alpha gamma` |
+| OBJECT IDENTIFIER | a name (`sysDescr`) or a numeric OID |
+| IpAddress | `192.0.2.1` |
+
+Before anything is sent, the value is checked against the MIB: the
+object must be an instance (`sysContact.0`, not `sysContact`) that is
+read-write or read-create, an enumeration value must be one of the labels,
+and numbers and string lengths must be in the ranges and sizes the MIB
+gives. A value that fails a check is not sent, and the message says what is
+allowed. `--force` sends it anyway, to see how an agent reacts.
+
+`--type` reads every value as another type, with net-snmp's letters: `i`
+(INTEGER), `u` (Unsigned32), `c` (Counter32), `C` (Counter64), `t`
+(TimeTicks), `a` (IpAddress), `o` (OBJECT IDENTIFIER), `s` (text), `x`
+(hex bytes) or `b` (BITS). Use `--type x` to give a string's bytes in hex,
+and `--type` for objects no loaded MIB defines.
+
+The agent's answer is printed like `get`'s output. When the agent refuses,
+the message says why in plain words (for example: a read-only community
+gets `noAccess`, because net-snmp needs `rwcommunity` to write).
+
 ## Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success; `lint` found nothing at or above `--fail-on` |
-| 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, `lint` found problems at or above `--fail-on` (default `error`), or the agent answered with an error (such as `noSuchName`), a "no such object/instance" value, or an SNMPv3 security error (unknown user, wrong password, ...) |
-| 2 | The command could not run: bad arguments, a file or folder that cannot be read, an unknown object name, or no response from the agent |
+| 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, `lint` found problems at or above `--fail-on` (default `error`), the agent answered with an error (such as `noSuchName` or `notWritable`), a "no such object/instance" value, or an SNMPv3 security error (unknown user, wrong password, ...), or `table` found no rows or a row that does not fit the INDEX |
+| 2 | The command could not run: bad arguments, a file or folder that cannot be read, an unknown object name, a `set` value the MIB does not allow (without `--force`), or no response from the agent |
 
 For a CI job that should also fail on warnings, use
 `ferosnmp lint --fail-on warning mibs/`.
