@@ -8,18 +8,23 @@
 //! - `ferosnmp mib why <symbol>`: how a name resolves, or why it does not.
 //! - `ferosnmp lint <files|dirs>...`: check MIB files and report problems
 //!   with file, line and column.
+//! - `ferosnmp get|next|bulk <agent> <objects>...` and
+//!   `ferosnmp walk <agent> [<root>]`: ask an SNMP agent (v1 or v2c).
 //!
 //! Exit codes, so scripts and CI jobs can rely on them:
 //!
 //! - 0: success, or no problems found;
 //! - 1: nothing found (`mib show`, `mib search`), a name does not resolve
-//!   (`mib why`), or `lint` found problems;
-//! - 2: the command could not run (bad arguments, unreadable files).
+//!   (`mib why`), `lint` found problems, or the agent answered with an
+//!   error or with "no such object" (`get`, `next`, `bulk`, `walk`);
+//! - 2: the command could not run (bad arguments, unreadable files, no
+//!   response from the agent).
 
 #![forbid(unsafe_code)]
 
 mod lint;
 mod mib;
+mod query;
 mod sources;
 
 use std::fmt;
@@ -31,9 +36,11 @@ use clap::{Parser, Subcommand};
 use mib_core::Strictness;
 
 use crate::lint::{FailOn, Format};
+use crate::query::{Query, QueryArgs};
 use crate::sources::MibSources;
 
-/// FeroSNMP: browse SNMP MIBs and check MIB files for problems.
+/// FeroSNMP: browse SNMP MIBs, check MIB files for problems and query SNMP
+/// agents.
 #[derive(Debug, Parser)]
 #[command(name = "ferosnmp", version, about)]
 struct Cli {
@@ -75,6 +82,73 @@ enum Command {
 
         #[command(flatten)]
         sources: MibSources,
+    },
+
+    /// Read objects from an agent with one GET request.
+    ///
+    /// Example: ferosnmp get 192.0.2.1 sysDescr.0 sysUpTime.0
+    Get {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// Instances to read: `sysDescr.0`, `IF-MIB::ifDescr.3` or a numeric
+        /// OID.
+        #[arg(required = true, value_name = "OBJECT")]
+        objects: Vec<String>,
+    },
+
+    /// Read the instance that follows each object (GETNEXT).
+    ///
+    /// Example: ferosnmp next 192.0.2.1 sysDescr ifDescr.3
+    Next {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// Objects or instances to start after.
+        #[arg(required = true, value_name = "OBJECT")]
+        objects: Vec<String>,
+    },
+
+    /// Read many instances in one GETBULK request (SNMPv2c).
+    ///
+    /// The first --non-repeaters objects get one successor each, like
+    /// `next`; each other object gets up to --max-repetitions successors.
+    Bulk {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// Objects or instances to start after.
+        #[arg(required = true, value_name = "OBJECT")]
+        objects: Vec<String>,
+
+        /// How many objects, from the first, get only one successor.
+        #[arg(long, default_value_t = 0, value_name = "N")]
+        non_repeaters: u32,
+
+        /// Successors for each of the other objects.
+        #[arg(long, default_value_t = snmp_core::DEFAULT_MAX_REPETITIONS, value_name = "N")]
+        max_repetitions: u32,
+    },
+
+    /// Read every instance below an object (GETBULK with SNMPv2c, GETNEXT
+    /// with SNMPv1).
+    ///
+    /// Example: ferosnmp walk 192.0.2.1 system
+    Walk {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// Where to start; without it, all of mib-2 (1.3.6.1.2.1).
+        #[arg(value_name = "OBJECT")]
+        root: Option<String>,
+
+        /// Instances per GETBULK request.
+        #[arg(long, default_value_t = snmp_core::DEFAULT_MAX_REPETITIONS, value_name = "N")]
+        max_repetitions: u32,
+
+        /// Use GETNEXT also with SNMPv2c, for agents with a broken GETBULK.
+        #[arg(long)]
+        no_bulk: bool,
     },
 }
 
@@ -219,6 +293,36 @@ fn run(command: Command, out: &mut impl Write) -> Result<Status, CliError> {
             };
             lint::run(&options, out)
         }
+        Command::Get { query, objects } => query::run(&query, Query::Get(objects), out),
+        Command::Next { query, objects } => query::run(&query, Query::Next(objects), out),
+        Command::Bulk {
+            query,
+            objects,
+            non_repeaters,
+            max_repetitions,
+        } => query::run(
+            &query,
+            Query::Bulk {
+                objects,
+                non_repeaters,
+                max_repetitions,
+            },
+            out,
+        ),
+        Command::Walk {
+            query,
+            root,
+            max_repetitions,
+            no_bulk,
+        } => query::run(
+            &query,
+            Query::Walk {
+                root,
+                max_repetitions,
+                bulk: !no_bulk,
+            },
+            out,
+        ),
     }
 }
 

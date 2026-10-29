@@ -1,0 +1,5 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stderr
+---
+ferosnmp: not a valid agent address "host:99999": the port must be a number from 1 to 65535

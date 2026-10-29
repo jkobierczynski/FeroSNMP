@@ -260,3 +260,34 @@ fn mib_why() {
     assert_eq!(run.code, 2);
     assert_eq!(run.stderr, "ferosnmp: module NO-SUCH-MIB is not loaded\n");
 }
+
+/// Nothing listens on the discard port of localhost, so the request is
+/// refused (or, where the system drops it silently, times out).
+#[test]
+fn query_without_agent() {
+    let run = ferosnmp(&[
+        "get",
+        "127.0.0.1:9",
+        "1.3.6.1.2.1.1.1.0",
+        "-t",
+        "0.3",
+        "-r",
+        "0",
+    ]);
+    assert_eq!(run.code, 2, "{}", run.stderr);
+    assert!(
+        run.stderr.contains("refused") || run.stderr.contains("no response"),
+        "{}",
+        run.stderr
+    );
+}
+
+#[test]
+fn query_errors() {
+    let run = ferosnmp(&["get", "127.0.0.1", "noSuchObjectName.0"]);
+    assert_eq!(run.code, 2);
+    insta::assert_snapshot!("query_unknown_name", run.stderr);
+    let run = ferosnmp(&["walk", "host:99999"]);
+    assert_eq!(run.code, 2);
+    insta::assert_snapshot!("query_bad_agent", run.stderr);
+}

@@ -16,6 +16,8 @@ path = "src/main.rs"
 clap.workspace = true
 mib-core.workspace = true
 serde_json.workspace = true
+snmp-core.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

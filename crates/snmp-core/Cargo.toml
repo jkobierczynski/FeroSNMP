@@ -1,6 +1,6 @@
 [package]
 name = "snmp-core"
-description = "Async SNMP engine for FeroSNMP (placeholder until phase 2)"
+description = "Async SNMP engine for FeroSNMP"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,10 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+mib-core.workspace = true
+snmp2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true

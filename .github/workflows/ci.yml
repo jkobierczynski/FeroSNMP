@@ -68,6 +68,24 @@ jobs:
       # `ferosnmp lint corpus` against its stored snapshot.
       - run: cargo test -p ferosnmp-cli --test cli --locked
 
+  agent:
+    # get/next/bulk/walk against a real net-snmp agent with fixed values,
+    # compared with the snapshots in apps/cli/tests/snapshots.
+    name: Query tests (net-snmp)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y snmpd
+      - run: crates/snmp-core/tests/agent/run-agent.sh
+      - run: cargo test -p ferosnmp-cli --test agent --locked
+        env:
+          FEROSNMP_TEST_AGENT: 127.0.0.1:11161
+      - name: Show the agent's log
+        if: failure()
+        run: cat "${TMPDIR:-/tmp}/ferosnmp-test-agent/snmpd.log"
+
   deny:
     name: cargo deny
     runs-on: ubuntu-latest
