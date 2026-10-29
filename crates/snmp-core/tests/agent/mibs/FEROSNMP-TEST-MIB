@@ -1,0 +1,177 @@
+FEROSNMP-TEST-MIB DEFINITIONS ::= BEGIN
+
+-- Objects served by the test agent (crates/snmp-core/tests/agent/fst_agent.py) for the
+-- golden-file query tests. They live under the net-snmp "playpen" arc
+-- (1.3.6.1.4.1.8072.9999), which net-snmp reserves for experiments, and
+-- cover every SMIv2 base type, enums, units and display hints.
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, Integer32, Unsigned32, Counter32,
+    Counter64, Gauge32, TimeTicks, IpAddress, enterprises
+        FROM SNMPv2-SMI
+    TEXTUAL-CONVENTION, DisplayString, PhysAddress, DateAndTime
+        FROM SNMPv2-TC;
+
+ferosnmpTestMIB MODULE-IDENTITY
+    LAST-UPDATED "202610290000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Test objects for the FeroSNMP query tests."
+    REVISION     "202610290000Z"
+    DESCRIPTION  "First version."
+    ::= { fstPlaypen 1 }
+
+fstNetSnmp  OBJECT IDENTIFIER ::= { enterprises 8072 }
+fstPlaypen  OBJECT IDENTIFIER ::= { fstNetSnmp 9999 }
+
+fstScalars  OBJECT IDENTIFIER ::= { ferosnmpTestMIB 1 }
+
+Tenths ::= TEXTUAL-CONVENTION
+    DISPLAY-HINT "d-1"
+    STATUS       current
+    DESCRIPTION  "A number in tenths."
+    SYNTAX       Integer32
+
+fstString OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A printable string."
+    ::= { fstScalars 1 }
+
+fstBinary OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Bytes that are not text."
+    ::= { fstScalars 2 }
+
+fstStatus OBJECT-TYPE
+    SYNTAX      INTEGER { up(1), down(2), testing(3) }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An enumeration."
+    ::= { fstScalars 3 }
+
+fstTemperature OBJECT-TYPE
+    SYNTAX      Tenths
+    UNITS       "degrees Celsius"
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An integer with a display hint and units."
+    ::= { fstScalars 4 }
+
+fstOctets OBJECT-TYPE
+    SYNTAX      Counter64
+    UNITS       "octets"
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A 64-bit counter; SNMPv1 cannot carry it."
+    ::= { fstScalars 5 }
+
+fstUptime OBJECT-TYPE
+    SYNTAX      TimeTicks
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Time ticks."
+    ::= { fstScalars 6 }
+
+fstAddress OBJECT-TYPE
+    SYNTAX      IpAddress
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An IPv4 address."
+    ::= { fstScalars 7 }
+
+fstPointer OBJECT-TYPE
+    SYNTAX      OBJECT IDENTIFIER
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An object identifier."
+    ::= { fstScalars 8 }
+
+fstMac OBJECT-TYPE
+    SYNTAX      PhysAddress
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A MAC address (display hint 1x:)."
+    ::= { fstScalars 9 }
+
+fstClock OBJECT-TYPE
+    SYNTAX      DateAndTime
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A date and time (display hint 2d-1d-1d,1d:1d:1d.1d,1a1d:1d)."
+    ::= { fstScalars 10 }
+
+fstLevel OBJECT-TYPE
+    SYNTAX      Gauge32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A gauge."
+    ::= { fstScalars 11 }
+
+fstPackets OBJECT-TYPE
+    SYNTAX      Counter32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A 32-bit counter."
+    ::= { fstScalars 12 }
+
+fstFlags OBJECT-TYPE
+    SYNTAX      BITS { alpha(0), beta(1), gamma(2), delta(9) }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Named bits."
+    ::= { fstScalars 13 }
+
+fstSize OBJECT-TYPE
+    SYNTAX      Unsigned32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An unsigned number."
+    ::= { fstScalars 14 }
+
+fstTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF FstEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "A table with enough rows to need many GETBULK requests."
+    ::= { ferosnmpTestMIB 2 }
+
+fstEntry OBJECT-TYPE
+    SYNTAX      FstEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "One row."
+    INDEX       { fstIndex }
+    ::= { fstTable 1 }
+
+FstEntry ::= SEQUENCE {
+    fstIndex  Integer32,
+    fstName   DisplayString,
+    fstCount  Counter32
+}
+
+fstIndex OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Row number."
+    ::= { fstEntry 1 }
+
+fstName OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Row name."
+    ::= { fstEntry 2 }
+
+fstCount OBJECT-TYPE
+    SYNTAX      Counter32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Row counter."
+    ::= { fstEntry 3 }
+
+END

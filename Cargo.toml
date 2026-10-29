@@ -31,6 +31,12 @@ fero-win32 = { path = "crates/fero-win32" }
 mib-rs = { version = "=0.10.0", default-features = false }
 thiserror = "2"
 insta = "1"
+# The SNMP engine (snmp-core): BER parsing from snmp2, the event loop from
+# tokio. snmp2's default features include SNMPv3 with pure-Rust crypto and
+# its own tokio sessions; both stay off (see crates/snmp-core/README.md, and
+# the crypto backend decision for M7).
+snmp2 = { version = "0.5.2", default-features = false }
+tokio = { version = "1.47", features = ["macros", "net", "rt", "sync", "time"] }
 # Used only by the CLI: argument parsing and JSON output.
 clap = { version = "4.6", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
