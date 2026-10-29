@@ -1,5 +1,6 @@
 //! The main window: menu, toolbar with search box and query controls, MIB
-//! tree, details pane, the Results, Log and Diagnostics tabs, and status bar.
+//! tree, details pane, the Results, Table, Log and Diagnostics tabs, and
+//! status bar.
 //!
 //! ```text
 //! +-----------------------------------------------------------+
@@ -13,7 +14,7 @@
 //! |                     | +-----------------------------------+  <- splitter
 //! |                     | | A textual description of ...      |  description
 //! +---------------------+-+-----------------------------------+  <- splitter
-//! | [Results (42)] [Log] [Diagnostics (12 errors, 3 warnings)]|
+//! | [Results (42)] [Table] [Log] [Diagnostics (12 errors, ...)]|
 //! | Name                   | Value            | Type          |  results
 //! +-----------------------------------------------------------+
 //! | Loaded in 1.2 s            | 214 modules, 48213 nodes     |  status bar
@@ -28,7 +29,9 @@
 //!
 //! Queries run on the SNMP engine's thread ([`QueryWorker`]); their results
 //! arrive as `WM_APP_QUERY` messages and are appended to the Results list
-//! while the window stays responsive.
+//! (and for Table, to the Table list) while the window stays responsive.
+//! Set value opens the [`set_dialog`], and sends what it builds the same
+//! way.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -44,11 +47,11 @@ use windows::Win32::UI::Controls::{
     HTREEITEM, LVHITTESTINFO, LVIS_SELECTED, LVM_SETEXTENDEDLISTVIEWSTYLE, LVM_SUBITEMHITTEST,
     LVN_GETDISPINFOW, LVN_ITEMACTIVATE, LVN_ITEMCHANGED, LVN_KEYDOWN, LVS_EX_DOUBLEBUFFER,
     LVS_EX_FULLROWSELECT, LVS_EX_LABELTIP, LVS_NOSORTHEADER, LVS_REPORT, LVS_SHOWSELALWAYS,
-    LVS_SINGLESEL, NM_CLICK, NM_SETFOCUS, NMHDR, NMLISTVIEW, NMLVDISPINFOW, NMLVKEYDOWN,
-    NMTREEVIEWW, SB_SETPARTS, SB_SETTEXTW, SBARS_SIZEGRIP, STATUSCLASSNAMEW, SetWindowTheme,
-    TCN_SELCHANGE, TVE_EXPAND, TVI_ROOT, TVIS_EXPANDEDONCE, TVM_SETEXTENDEDSTYLE, TVM_SETIMAGELIST,
-    TVN_ITEMEXPANDINGW, TVN_SELCHANGEDW, TVS_EX_DOUBLEBUFFER, TVS_HASBUTTONS, TVS_LINESATROOT,
-    TVS_SHOWSELALWAYS, TVSIL_NORMAL, WC_LISTVIEWW, WC_TREEVIEWW,
+    LVS_SINGLESEL, NM_CLICK, NM_SETFOCUS, NMHDR, NMITEMACTIVATE, NMLISTVIEW, NMLVDISPINFOW,
+    NMLVKEYDOWN, NMTREEVIEWW, SB_SETPARTS, SB_SETTEXTW, SBARS_SIZEGRIP, STATUSCLASSNAMEW,
+    SetWindowTheme, TCN_SELCHANGE, TVE_EXPAND, TVI_ROOT, TVIS_EXPANDEDONCE, TVM_SETEXTENDEDSTYLE,
+    TVM_SETIMAGELIST, TVN_ITEMEXPANDINGW, TVN_SELCHANGEDW, TVS_EX_DOUBLEBUFFER, TVS_HASBUTTONS,
+    TVS_LINESATROOT, TVS_SHOWSELALWAYS, TVSIL_NORMAL, WC_LISTVIEWW, WC_TREEVIEWW,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetFocus, GetKeyState, ReleaseCapture, SetCapture, SetFocus, VK_CONTROL,
@@ -71,7 +74,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{HSTRING, w};
 
 use mib_core::{Diagnostic, MibSet, NodeId, NodeKind, Oid, SourceView};
-use snmp_core::{Error, Event, ObjectError, Operation};
+use snmp_core::{Error, Event, ObjectError, Operation, Value};
 
 use fero_win32::font::Font;
 use fero_win32::shell::{self, FileType};
@@ -89,6 +92,7 @@ use crate::oplog::{self, LogColumn, OpLog};
 use crate::query::{Query, QueryWorker};
 use crate::results::{Column, ResultList, count_text};
 use crate::settings::Settings;
+use crate::table::{TableList, find_table};
 use crate::targets::{self, Agent};
 use crate::{VERSION, diagnostics, node_info, rich_text};
 
@@ -98,8 +102,9 @@ use super::text_window::{Content, TextWindow};
 use super::toolbar::Toolbar;
 use super::{
     WM_APP_LOADED, WM_APP_QUERY, agents_dialog, credentials, details, error_box, id, send,
-    settings_dialog, tree,
+    set_dialog, settings_dialog, tree,
 };
+use set_dialog::SetRequest;
 
 /// Sizes at 96 DPI.
 const WINDOW_SIZE: (i32, i32) = (1100, 720);
@@ -136,17 +141,22 @@ enum Focus {
     Tree,
     Properties,
     Results,
+    Table,
     Log,
     Diagnostics,
 }
 
-/// The four query buttons.
+/// The query buttons, and Set value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum QueryKind {
     Get,
     Next,
     Bulk,
     Walk,
+    /// A walk of a table's rows, shown in the Table tab.
+    Table,
+    /// A SET of one value, built by the Set value dialog.
+    Set,
 }
 
 impl QueryKind {
@@ -156,16 +166,20 @@ impl QueryKind {
             QueryKind::Next => "Get next",
             QueryKind::Bulk => "Get bulk",
             QueryKind::Walk => "Walk",
+            QueryKind::Table => "Table",
+            QueryKind::Set => "Set",
         }
     }
 }
 
-/// A query as typed: what F5 repeats.
+/// A query as typed: what F5 repeats (except a Set).
 #[derive(Debug, Clone)]
 struct Request {
     kind: QueryKind,
     agent: String,
     object: String,
+    /// For a Set: the value to send.
+    set: Option<SetRequest>,
 }
 
 /// The query whose results the Results list shows.
@@ -255,6 +269,10 @@ pub struct MainWindow {
     last_request: RefCell<Option<Request>>,
     /// The Results tab.
     results: RefCell<ResultList>,
+    /// The Table tab.
+    table: RefCell<TableList>,
+    /// The column of the Table cell last right-clicked or activated.
+    table_column: Cell<usize>,
     /// The Log tab.
     log: RefCell<OpLog>,
     /// The column of the Results cell last right-clicked, for "Copy cell".
@@ -334,6 +352,8 @@ impl MainWindow {
             query_number: Cell::new(0),
             last_request: RefCell::new(None),
             results: RefCell::new(ResultList::default()),
+            table: RefCell::new(TableList::default()),
+            table_column: Cell::new(0),
             log: RefCell::new(OpLog::default()),
             clicked_column: Cell::new(0),
             last_take: Cell::new(None),
@@ -502,6 +522,7 @@ impl MainWindow {
             controls.status,
             controls.panel.tabs,
             controls.panel.results,
+            controls.panel.table,
             controls.panel.log,
             controls.panel.diagnostics,
         ] {
@@ -552,7 +573,8 @@ impl MainWindow {
         *self.icons.borrow_mut() = Some(icons);
         *self.font.borrow_mut() = Some(font);
         details::size_columns(controls.properties, dpi);
-        controls.panel.size_columns(dpi);
+        let headers = self.table.borrow().headers();
+        controls.panel.size_columns(dpi, &headers);
         Ok(())
     }
 
@@ -866,11 +888,14 @@ impl MainWindow {
             .and_then(|oid| set.node_at(&oid).map(|node| node.id()))
             .or_else(|| set.resolve("internet").map(|node| node.id()));
         self.results.borrow_mut().set_mibs(Some(set.clone()));
+        self.table.borrow_mut().set_mibs(Some(set.clone()));
         *self.mibs.borrow_mut() = Some(set);
-        // The names in the Results list may have changed.
-        // SAFETY: repainting our own control.
+        // The names in the Results and Table lists may have changed.
+        // SAFETY: repainting our own controls.
         unsafe {
-            let _ = InvalidateRect(Some(self.controls.get().panel.results), None, true);
+            let panel = self.controls.get().panel;
+            let _ = InvalidateRect(Some(panel.results), None, true);
+            let _ = InvalidateRect(Some(panel.table), None, true);
         }
 
         for item in &top_level {
@@ -1335,7 +1360,7 @@ impl MainWindow {
             return;
         };
         let query = window_text(toolbar.search);
-        if self.pane.get() == Focus::Results {
+        if matches!(self.pane.get(), Focus::Results | Focus::Table) {
             self.find_in_results(&query, backwards);
             return;
         }
@@ -1402,6 +1427,7 @@ impl MainWindow {
             id::ESCAPE if Some(focus) == search => {
                 let back = match self.pane.get() {
                     Focus::Results => controls.panel.results,
+                    Focus::Table => controls.panel.table,
                     _ => controls.tree,
                 };
                 // SAFETY: moving the focus between our own controls.
@@ -1414,6 +1440,8 @@ impl MainWindow {
             id::NEXT => self.run(QueryKind::Next),
             id::BULK => self.run(QueryKind::Bulk),
             id::WALK => self.run(QueryKind::Walk),
+            id::TABLE_QUERY => self.run(QueryKind::Table),
+            id::SET_VALUE => self.set_value_of(focus),
             id::REPEAT => self.repeat(),
             id::AGENTS => self.edit_agents(),
             id::RAW => self.toggle_raw(),
@@ -1429,7 +1457,7 @@ impl MainWindow {
             id::EXPORT_RESULTS => self.export_results(),
             id::FIND => {
                 if let Some(search) = search {
-                    let hint = if self.pane.get() == Focus::Results {
+                    let hint = if matches!(self.pane.get(), Focus::Results | Focus::Table) {
                         "Text in the results (Ctrl+F)"
                     } else {
                         "Name, OID or pattern such as if*Octets (Ctrl+F)"
@@ -1570,6 +1598,7 @@ impl MainWindow {
             kind,
             agent: window_text(toolbar.agent).trim().to_string(),
             object: window_text(toolbar.object).trim().to_string(),
+            set: None,
         });
     }
 
@@ -1590,7 +1619,7 @@ impl MainWindow {
         match last {
             Some(request) => self.start_query(request),
             None => self.set_status(
-                "Nothing to repeat yet: run a query with Get, Next, Bulk or Walk first.",
+                "Nothing to repeat yet: run a query with Get, Next, Bulk, Walk or Table first.",
             ),
         }
     }
@@ -1619,9 +1648,34 @@ impl MainWindow {
         };
         let resolved = {
             let mibs = self.mibs.borrow();
-            resolve(mibs.as_ref(), &request.object, request.kind)
+            match (request.kind, mibs.as_ref(), &request.set) {
+                (QueryKind::Set, _, Some(set)) => {
+                    let oid = set.varbind.oid.clone();
+                    let name = mibs
+                        .as_ref()
+                        .map_or_else(|| oid.to_string(), |mibs| mibs.format_oid(&oid));
+                    Ok((oid, name, Some(set.message.clone()), None))
+                }
+                (QueryKind::Table, Some(set), _) => find_table(set, &request.object).map(|table| {
+                    let what = set.format_oid(&table.oid);
+                    let note = table.augments.as_ref().map(|augments| {
+                        format!(
+                            "{} AUGMENTS {augments}: its rows have the same INDEX",
+                            table.name
+                        )
+                    });
+                    (table.row_oid.clone(), what, note, Some(table))
+                }),
+                (QueryKind::Table, None, _) => Err(
+                    "The MIBs are still loading, so the table cannot be looked up yet. \
+                     Wait a moment and try again."
+                        .to_string(),
+                ),
+                (kind, mibs, _) => resolve(mibs, &request.object, kind)
+                    .map(|(oid, what, note)| (oid, what, note, None)),
+            }
         };
-        let (oid, what, note) = match resolved {
+        let (oid, what, note, table) = match resolved {
             Ok(resolved) => resolved,
             Err(message) => return self.input_problem(toolbar.object, &message),
         };
@@ -1633,10 +1687,14 @@ impl MainWindow {
                 non_repeaters: 0,
                 max_repetitions: agent.max_repetitions,
             },
-            QueryKind::Walk => Operation::Walk {
+            QueryKind::Walk | QueryKind::Table => Operation::Walk {
                 root: oid.clone(),
                 max_repetitions: agent.max_repetitions,
                 bulk: true,
+            },
+            QueryKind::Set => match &request.set {
+                Some(set) => Operation::Set(vec![set.varbind.clone()]),
+                None => return,
             },
         };
 
@@ -1696,15 +1754,34 @@ impl MainWindow {
         let panel = self.controls.get().panel;
         bottom_panel::set_count(panel.results, 0, false);
         panel.set_title(Tab::Results, "Results");
-        if panel.current_tab() != Tab::Results {
-            panel.select_tab(Tab::Results);
+        let tab = if let Some(table) = table {
+            let headers = {
+                let mut list = self.table.borrow_mut();
+                list.start(table);
+                list.headers()
+            };
+            panel.set_table_columns(&headers, self.dpi.get());
+            bottom_panel::set_count(panel.table, 0, false);
+            panel.set_title(Tab::Table, &self.table.borrow().title());
+            Tab::Table
+        } else if request.kind == QueryKind::Set && panel.current_tab() == Tab::Table {
+            // A cell of the table was set: its new value shows there.
+            Tab::Table
+        } else {
+            Tab::Results
+        };
+        if panel.current_tab() != tab {
+            panel.select_tab(tab);
         }
         let mut started = format!(
             "{} {what} ({oid}), {}",
             request.kind.name(),
             agent.target.version
         );
-        if matches!(request.kind, QueryKind::Bulk | QueryKind::Walk) {
+        if matches!(
+            request.kind,
+            QueryKind::Bulk | QueryKind::Walk | QueryKind::Table
+        ) {
             started.push_str(&format!(", max-repetitions {}", agent.max_repetitions));
         }
         match &agent.saved {
@@ -1713,7 +1790,12 @@ impl MainWindow {
         }
         self.log_line(&target, started);
         if let Some(note) = note {
-            self.log_line(&target, format!("Note: {note}"));
+            let label = if request.kind == QueryKind::Set {
+                "Value"
+            } else {
+                "Note"
+            };
+            self.log_line(&target, format!("{label}: {note}"));
         }
         self.refresh_log();
         *self.running.borrow_mut() = Some(Running {
@@ -1736,7 +1818,11 @@ impl MainWindow {
             self.settings.borrow_mut().agent = request.agent.clone();
             self.save_settings();
         }
-        *self.last_request.borrow_mut() = Some(request);
+        // A Set is not repeated by F5 or Enter: a value is sent only from
+        // the dialog, where it is checked.
+        if request.kind != QueryKind::Set {
+            *self.last_request.borrow_mut() = Some(request);
+        }
     }
 
     /// WM_APP_QUERY: events of a query are waiting. Take them at once,
@@ -1779,7 +1865,7 @@ impl MainWindow {
     /// Take the events that are waiting and show them.
     fn on_query_events(&self, number: u64) {
         self.last_take.set(Some(Instant::now()));
-        let (events, agent) = {
+        let (events, agent, kind) = {
             let running = self.running.borrow();
             match running.as_ref() {
                 Some(running) if running.number == number => (
@@ -1789,6 +1875,7 @@ impl MainWindow {
                         .map(|query| query.take())
                         .unwrap_or_default(),
                     running.agent.clone(),
+                    running.kind,
                 ),
                 // An older query: its results are no longer shown.
                 _ => return,
@@ -1800,7 +1887,12 @@ impl MainWindow {
         let mut end = None;
         for event in events {
             match event {
-                Event::Varbinds(varbinds) => self.results.borrow_mut().extend(varbinds),
+                Event::Varbinds(varbinds) => {
+                    if kind == QueryKind::Table {
+                        self.table.borrow_mut().extend(varbinds.iter().cloned());
+                    }
+                    self.results.borrow_mut().extend(varbinds);
+                }
                 Event::Log(entry) => self.log_line(&agent, oplog::request_text(&entry)),
                 Event::Notice(text) => self.log_line(&agent, format!("Note: {text}")),
                 Event::Engine(info) => self.log_line(&agent, oplog::engine_text(&info)),
@@ -1811,6 +1903,16 @@ impl MainWindow {
         let panel = self.controls.get().panel;
         bottom_panel::set_count(panel.results, count, true);
         panel.set_title(Tab::Results, &format!("Results ({})", count_text(count)));
+        if kind == QueryKind::Table {
+            // Rows of a table walk arrive column by column, so every row can
+            // change: repaint them all.
+            let (rows, title) = {
+                let table = self.table.borrow();
+                (table.len(), table.title())
+            };
+            bottom_panel::set_count(panel.table, rows, false);
+            panel.set_title(Tab::Table, &title);
+        }
         match end {
             Some(event) => self.finish(event),
             None => {
@@ -1846,6 +1948,46 @@ impl MainWindow {
             n => format!("{} values", count_text(n)),
         };
         let status = match event {
+            Event::Finished(summary) if kind == QueryKind::Set => {
+                self.log_line(&agent, oplog::summary_text(&summary));
+                self.show_set_result();
+                let value = {
+                    let results = self.results.borrow();
+                    (0..results.len())
+                        .map(|row| results.cell(row, Column::Value))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                format!("Set {what} = {value} on {agent}: done")
+            }
+            Event::Finished(summary) if kind == QueryKind::Table => {
+                self.log_line(&agent, oplog::summary_text(&summary));
+                let (rows, bad) = {
+                    let table = self.table.borrow();
+                    (table.len(), table.index_errors())
+                };
+                let mut status = match rows {
+                    0 => format!("Table: the agent has no rows in {what}"),
+                    1 => format!("Table {what}: 1 row from {agent}"),
+                    n => format!("Table {what}: {} rows from {agent}", count_text(n)),
+                };
+                if rows > 0 {
+                    status.push_str(&format!(" in {}", oplog::seconds(summary.elapsed)));
+                }
+                if rows > 0 {
+                    let panel = self.controls.get().panel;
+                    panel.fit_table_columns(&self.table.borrow().headers(), self.dpi.get());
+                }
+                if bad > 0 {
+                    let note = format!(
+                        "{bad} row(s) have an instance that does not fit the INDEX of {what}; \
+                         they are shown as ?.suffix"
+                    );
+                    self.log_line(&agent, format!("Note: {note}"));
+                    status.push_str(&format!(" ({note})"));
+                }
+                status
+            }
             Event::Finished(summary) => {
                 self.log_line(&agent, oplog::summary_text(&summary));
                 if kind == QueryKind::Next {
@@ -1873,6 +2015,16 @@ impl MainWindow {
                     let mibs = self.mibs.borrow();
                     describe(&error, mibs.as_ref())
                 };
+                if kind == QueryKind::Set {
+                    self.log_line(&agent, format!("Failed: {text}"));
+                    self.set_status(&format!("Set {what} failed: {text}"));
+                    // The dialog is closed by now; make sure this is seen.
+                    error_box(
+                        Some(self.hwnd()),
+                        &format!("{what} was not set.\n\n{}.", text.trim_end_matches('.')),
+                    );
+                    return;
+                }
                 self.log_line(&agent, format!("Failed after {values}: {text}"));
                 let got = if count > 0 {
                     format!(" ({values} received before)")
@@ -1997,6 +2149,13 @@ impl MainWindow {
                     .collect(),
                 None => results.tab_separated(rows),
             }
+        } else if focus == controls.panel.table {
+            let rows = bottom_panel::all_selected(focus);
+            let table = self.table.borrow();
+            match column {
+                Some(column) => table.column_text(rows, column),
+                None => table.tab_separated(rows),
+            }
         } else if focus == controls.panel.log {
             self.log
                 .borrow()
@@ -2091,30 +2250,47 @@ impl MainWindow {
         self.set_status("");
     }
 
-    /// File > Export results: save every row as CSV.
+    /// File > Export results: save every row of the Results list as CSV,
+    /// or of the Table list when that tab is shown.
     fn export_results(&self) {
-        if self.results.borrow().is_empty() {
-            self.set_status("There are no results to export yet.");
+        let table = self.controls.get().panel.current_tab() == Tab::Table;
+        let empty = if table {
+            self.table.borrow().is_empty()
+        } else {
+            self.results.borrow().is_empty()
+        };
+        if empty {
+            self.set_status(if table {
+                "There is no table to export yet: walk one with Table (Ctrl+T)."
+            } else {
+                "There are no results to export yet."
+            });
             return;
         }
+        let file_name = match self.table.borrow().table() {
+            Some(shown) if table => format!("{}.csv", shown.name),
+            _ => "results.csv".to_string(),
+        };
         let types = [FileType {
             name: "CSV, for spreadsheets (*.csv)",
             pattern: "*.csv",
             extension: "csv",
         }];
-        let path =
-            match shell::save_file(Some(self.hwnd()), "Export results", "results.csv", &types) {
-                Ok(Some(path)) => path,
-                Ok(None) => return,
-                Err(error) => {
-                    error_box(
-                        Some(self.hwnd()),
-                        &format!("The Save dialog could not be opened.\n\n{error}"),
-                    );
-                    return;
-                }
-            };
-        let (text, count) = {
+        let path = match shell::save_file(Some(self.hwnd()), "Export results", &file_name, &types) {
+            Ok(Some(path)) => path,
+            Ok(None) => return,
+            Err(error) => {
+                error_box(
+                    Some(self.hwnd()),
+                    &format!("The Save dialog could not be opened.\n\n{error}"),
+                );
+                return;
+            }
+        };
+        let (text, count) = if table {
+            let list = self.table.borrow();
+            (list.csv(), list.len())
+        } else {
             let results = self.results.borrow();
             (results.csv(), results.len())
         };
@@ -2131,18 +2307,23 @@ impl MainWindow {
         }
     }
 
-    /// The search box while the Results list was used last: find text in
-    /// the results.
+    /// The search box while the Results or Table list was used last: find
+    /// text in that list.
     fn find_in_results(&self, query: &str, backwards: bool) {
-        let list = self.controls.get().panel.results;
-        let found = {
+        let panel = self.controls.get().panel;
+        let found = if self.pane.get() == Focus::Table {
+            let table = self.table.borrow();
+            table
+                .find(query, bottom_panel::selected(panel.table), backwards)
+                .map(|row| (panel.table, row, table.len()))
+        } else {
             let results = self.results.borrow();
             results
-                .find(query, bottom_panel::selected(list), backwards)
-                .map(|row| (row, results.len()))
+                .find(query, bottom_panel::selected(panel.results), backwards)
+                .map(|row| (panel.results, row, results.len()))
         };
         match found {
-            Some((row, count)) => {
+            Some((list, row, count)) => {
                 bottom_panel::select(list, Some(row));
                 self.set_status(&format!(
                     "Row {} of {} (F3: next, Shift+F3: previous; click the tree to search the MIBs)",
@@ -2152,7 +2333,7 @@ impl MainWindow {
             }
             None if query.trim().is_empty() => self.set_status(""),
             None => self.set_status(&format!(
-                "Nothing in the results matches \u{201c}{}\u{201d} (click the tree to search the MIBs)",
+                "Nothing in the list matches \u{201c}{}\u{201d} (click the tree to search the MIBs)",
                 query.trim()
             )),
         }
@@ -2202,35 +2383,8 @@ impl MainWindow {
     /// WM_CONTEXTMENU on the Results list: the right-click menu.
     fn results_menu(&self, lparam: LPARAM) {
         let list = self.controls.get().panel.results;
-        let mut point = POINT::default();
-        // SAFETY: reading the cursor position.
-        unsafe {
-            if lparam.0 == -1 {
-                // From the keyboard (Shift+F10): at the mouse pointer.
-                let _ = GetCursorPos(&mut point);
-            } else {
-                let (x, y) = point_from_lparam(lparam.0);
-                point = POINT { x, y };
-            }
-        }
-        // Which cell was clicked: select its row if it is not selected yet.
-        let mut hit = LVHITTESTINFO {
-            pt: point,
-            ..Default::default()
-        };
-        // SAFETY: converting to the list's coordinates, and LVM_SUBITEMHITTEST
-        // fills `hit`, which lives until the call returns.
-        unsafe {
-            let _ = ScreenToClient(list, &mut hit.pt);
-            send(list, LVM_SUBITEMHITTEST, 0, &mut hit as *mut _ as isize);
-        }
-        if let Ok(row) = usize::try_from(hit.iItem)
-            && !bottom_panel::all_selected(list).contains(&row)
-        {
-            bottom_panel::select(list, Some(row));
-        }
-        self.clicked_column
-            .set(usize::try_from(hit.iSubItem).unwrap_or(0));
+        let (point, column) = clicked_cell(list, lparam);
+        self.clicked_column.set(column);
         let selected = bottom_panel::selected(list).is_some();
         let any = !self.results.borrow().is_empty();
         let column_title = Column::ALL
@@ -2255,6 +2409,7 @@ impl MainWindow {
             add(id::COPY_OID, "Copy &OID", selected);
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             add(id::SHOW_IN_TREE, "Show in MIB &tree\tEnter", selected);
+            add(id::SET_VALUE, "&Set value\u{2026}\tF2", selected);
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             add(id::EXPORT_RESULTS, "&Export as CSV\u{2026}\tCtrl+S", any);
             add(id::CLEAR_RESULTS, "C&lear results", any);
@@ -2273,7 +2428,257 @@ impl MainWindow {
         match command {
             0 => {}
             id::COPY => self.copy(list, None),
+            id::SET_VALUE => self.set_value_of(list),
             other => self.on_command(other),
+        }
+    }
+
+    /// WM_NOTIFY from the Table list.
+    fn on_table_notify(&self, code: u32, lparam: LPARAM) {
+        let list = self.controls.get().panel.table;
+        match code {
+            LVN_GETDISPINFOW => {
+                // SAFETY: as in on_results_notify.
+                let info = unsafe { &mut *(lparam.0 as *mut NMLVDISPINFOW) };
+                if let Some((row, column)) = bottom_panel::asked_cell(info) {
+                    let text = self.table.borrow().cell(row, column);
+                    bottom_panel::fill_cell(info, &text);
+                }
+            }
+            NM_SETFOCUS => self.pane.set(Focus::Table),
+            LVN_ITEMACTIVATE => {
+                // SAFETY: for LVN_ITEMACTIVATE, lparam points to an
+                // NMITEMACTIVATE.
+                let info = unsafe { &*(lparam.0 as *const NMITEMACTIVATE) };
+                let column = usize::try_from(info.iSubItem).unwrap_or(0);
+                // Enter gives column 0, and INDEX columns hold no value of
+                // their own: then the column used last, or the first value.
+                let index_count = self.table.borrow().index_count();
+                if column >= index_count {
+                    self.table_column.set(column);
+                } else if self.table_column.get() < index_count {
+                    self.table_column.set(index_count);
+                }
+                self.set_value_of(list);
+            }
+            LVN_KEYDOWN => select_all_on_ctrl_a(list, lparam),
+            _ => {}
+        }
+    }
+
+    /// WM_CONTEXTMENU on the Table list: the right-click menu.
+    fn table_menu(&self, lparam: LPARAM) {
+        let list = self.controls.get().panel.table;
+        let (point, column) = clicked_cell(list, lparam);
+        self.table_column.set(column);
+        let (selected, any, title, settable) = {
+            let table = self.table.borrow();
+            let row = bottom_panel::selected(list);
+            (
+                row.is_some(),
+                !table.is_empty(),
+                table.column_name(column),
+                row.and_then(|row| table.cell_target(row, column)).is_some(),
+            )
+        };
+        let title = title.unwrap_or_else(|| "cell".to_string());
+        // SAFETY: a popup menu we create, show and destroy here; the strings
+        // are copied by AppendMenuW.
+        let command = unsafe {
+            let Ok(menu) = CreatePopupMenu() else {
+                return;
+            };
+            let add = |id: u16, text: &str, enabled: bool| {
+                let flags = if enabled {
+                    MF_STRING
+                } else {
+                    MF_STRING | MF_GRAYED
+                };
+                let _ = AppendMenuW(menu, flags, usize::from(id), &HSTRING::from(text));
+            };
+            add(id::COPY, "&Copy rows\tCtrl+C", selected);
+            add(id::COPY_CELL, &format!("Copy &{title}"), selected);
+            add(id::COPY_OID, &format!("Copy OID of {title}"), settable);
+            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            add(
+                id::SET_VALUE,
+                &format!("&Set {title}\u{2026}\tEnter"),
+                settable,
+            );
+            add(id::SHOW_IN_TREE, &format!("Show {title} in MIB &tree"), any);
+            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            add(
+                id::EXPORT_RESULTS,
+                "&Export table as CSV\u{2026}\tCtrl+S",
+                any,
+            );
+            add(id::CLEAR_TABLE, "C&lear table", any);
+            let command = TrackPopupMenu(
+                menu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                point.x,
+                point.y,
+                None,
+                self.hwnd(),
+                None,
+            );
+            let _ = DestroyMenu(menu);
+            command.0 as u16
+        };
+        match command {
+            0 => {}
+            id::COPY => self.copy(list, None),
+            id::COPY_CELL => self.copy(list, Some(column)),
+            id::COPY_OID => {
+                let text = {
+                    let table = self.table.borrow();
+                    bottom_panel::all_selected(list)
+                        .into_iter()
+                        .filter_map(|row| table.cell_target(row, column))
+                        .map(|cell| format!("{}\r\n", cell.oid))
+                        .collect::<String>()
+                };
+                self.put_on_clipboard(&text);
+            }
+            id::SET_VALUE => self.set_value_of(list),
+            id::SHOW_IN_TREE => {
+                let name = self.table.borrow().column_name(column);
+                let target = {
+                    let mibs = self.mibs.borrow();
+                    let module = self
+                        .table
+                        .borrow()
+                        .table()
+                        .and_then(|table| table.module.clone());
+                    mibs.as_ref().zip(name).and_then(|(set, name)| {
+                        // The column's own module first: names can repeat.
+                        module
+                            .and_then(|module| set.resolve(&format!("{module}::{name}")))
+                            .or_else(|| set.resolve(&name))
+                            .map(|node| node.id())
+                    })
+                };
+                if let Some(target) = target {
+                    self.reveal(target);
+                    // SAFETY: moving the focus to our own control.
+                    unsafe {
+                        let _ = SetFocus(Some(self.controls.get().tree));
+                    }
+                }
+            }
+            id::CLEAR_TABLE => self.clear_table(),
+            other => self.on_command(other),
+        }
+    }
+
+    fn clear_table(&self) {
+        let is_table = self
+            .running
+            .borrow()
+            .as_ref()
+            .is_some_and(|running| running.kind == QueryKind::Table);
+        if is_table {
+            self.clear_results();
+        }
+        self.table.borrow_mut().clear();
+        let panel = self.controls.get().panel;
+        panel.set_table_columns(&[], self.dpi.get());
+        bottom_panel::set_count(panel.table, 0, false);
+        panel.set_title(Tab::Table, "Table");
+    }
+
+    /// Set value (F2, the toolbar, the context menus, or Enter on a table
+    /// cell): open the Set value dialog for what `focus` shows. In the
+    /// Results list, the selected result; in the Table list, the cell in
+    /// the selected row and the column last clicked; elsewhere, what the
+    /// Object box says.
+    fn set_value_of(&self, focus: HWND) {
+        let panel = self.controls.get().panel;
+        let start = if focus == panel.results {
+            let results = self.results.borrow();
+            bottom_panel::selected(focus)
+                .and_then(|row| results.get(row))
+                .map(|varbind| (varbind.oid.to_string(), Some(varbind.value.clone())))
+        } else if focus == panel.table {
+            let Some(cell) = bottom_panel::selected(focus).and_then(|row| {
+                self.table
+                    .borrow()
+                    .cell_target(row, self.table_column.get())
+            }) else {
+                self.set_status(
+                    "Pick a cell to set: right-click it or double-click it (the INDEX columns \
+                     are part of the row's name, not values).",
+                );
+                return;
+            };
+            Some((cell.oid.to_string(), cell.value))
+        } else {
+            None
+        };
+        let (object, current) = match start {
+            Some((oid, value)) => (oid, value),
+            None => {
+                let Some(toolbar) = self.toolbar.get() else {
+                    return;
+                };
+                let object = window_text(toolbar.object).trim().to_string();
+                // The value from the last query, when it read this instance.
+                let current = {
+                    let mibs = self.mibs.borrow();
+                    let results = self.results.borrow();
+                    crate::set_value::SetForm::new(mibs.as_ref(), &object)
+                        .oid()
+                        .and_then(|oid| {
+                            (0..results.len())
+                                .filter_map(|row| results.get(row))
+                                .find(|varbind| varbind.oid == *oid)
+                                .map(|varbind| varbind.value.clone())
+                        })
+                };
+                (object, current)
+            }
+        };
+        self.open_set_dialog(&object, current.as_ref());
+    }
+
+    fn open_set_dialog(&self, object: &str, current: Option<&Value>) {
+        let Some(toolbar) = self.toolbar.get() else {
+            return;
+        };
+        // The dialog runs a message loop; hold no borrow while it is open.
+        let mibs = self.mibs.borrow().clone();
+        let Some(request) = set_dialog::show(self.hwnd(), mibs.as_ref(), object, current) else {
+            return;
+        };
+        let object = mibs.as_ref().map_or_else(
+            || request.varbind.oid.to_string(),
+            |set| set.format_oid(&request.varbind.oid),
+        );
+        self.start_query(Request {
+            kind: QueryKind::Set,
+            agent: window_text(toolbar.agent).trim().to_string(),
+            object,
+            set: Some(request),
+        });
+    }
+
+    /// After a Set: the agent answers with the values it now has; show them
+    /// in the table when they are cells of it.
+    fn show_set_result(&self) {
+        let changed = {
+            let results = self.results.borrow();
+            let mut table = self.table.borrow_mut();
+            let mut changed = false;
+            for varbind in (0..results.len()).filter_map(|row| results.get(row)) {
+                changed |= table.update(varbind);
+            }
+            changed
+        };
+        if changed {
+            // SAFETY: repainting our own control.
+            unsafe {
+                let _ = InvalidateRect(Some(self.controls.get().panel.table), None, true);
+            }
         }
     }
 
@@ -2389,6 +2794,8 @@ impl Window for MainWindow {
                     self.on_diagnostics_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.results {
                     self.on_results_notify(header.code, lparam);
+                } else if header.hwndFrom == self.controls.get().panel.table {
+                    self.on_table_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.log {
                     self.on_log_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.tabs
@@ -2450,6 +2857,10 @@ impl Window for MainWindow {
                 self.results_menu(lparam);
                 Some(LRESULT(0))
             }
+            WM_CONTEXTMENU if HWND(wparam.0 as *mut _) == self.controls.get().panel.table => {
+                self.table_menu(lparam);
+                Some(LRESULT(0))
+            }
             WM_CLOSE => {
                 // SAFETY: closing our own window.
                 unsafe {
@@ -2505,6 +2916,9 @@ fn menu_bar() -> windows::core::Result<HMENU> {
         add(query, id::NEXT, "Get &next")?;
         add(query, id::BULK, "Get &bulk")?;
         add(query, id::WALK, "&Walk")?;
+        add(query, id::TABLE_QUERY, "&Table\tCtrl+T")?;
+        AppendMenuW(query, MF_SEPARATOR, 0, None)?;
+        add(query, id::SET_VALUE, "&Set value\u{2026}\tF2")?;
         AppendMenuW(query, MF_SEPARATOR, 0, None)?;
         add(query, id::REPEAT, "&Repeat last query\tF5")?;
         add(query, id::CANCEL, "&Cancel\tEsc")?;
@@ -2605,6 +3019,38 @@ fn source_content(set: Option<&MibSet>, diagnostic: &Diagnostic) -> Content {
     }
 }
 
+/// Where a list's context menu opens, and the column clicked. The row
+/// clicked is selected if it was not yet.
+fn clicked_cell(list: HWND, lparam: LPARAM) -> (POINT, usize) {
+    let mut point = POINT::default();
+    // SAFETY: reading the cursor position.
+    unsafe {
+        if lparam.0 == -1 {
+            // From the keyboard (Shift+F10): at the mouse pointer.
+            let _ = GetCursorPos(&mut point);
+        } else {
+            let (x, y) = point_from_lparam(lparam.0);
+            point = POINT { x, y };
+        }
+    }
+    let mut hit = LVHITTESTINFO {
+        pt: point,
+        ..Default::default()
+    };
+    // SAFETY: converting to the list's coordinates, and LVM_SUBITEMHITTEST
+    // fills `hit`, which lives until the call returns.
+    unsafe {
+        let _ = ScreenToClient(list, &mut hit.pt);
+        send(list, LVM_SUBITEMHITTEST, 0, &mut hit as *mut _ as isize);
+    }
+    if let Ok(row) = usize::try_from(hit.iItem)
+        && !bottom_panel::all_selected(list).contains(&row)
+    {
+        bottom_panel::select(list, Some(row));
+    }
+    (point, usize::try_from(hit.iSubItem).unwrap_or(0))
+}
+
 /// Ctrl+A in a list: select every row.
 fn select_all_on_ctrl_a(list: HWND, lparam: LPARAM) {
     // SAFETY: for LVN_KEYDOWN, lparam points to an NMLVKEYDOWN; GetKeyState
@@ -2684,7 +3130,13 @@ fn describe(error: &Error, mibs: Option<&MibSet>) -> String {
             status,
             oid: Some(oid),
             ..
-        } => format!("{target} answered {status} for {}", name(oid)),
+        } => {
+            let mut text = format!("{target} answered {status} for {}", name(oid));
+            if let Some(hint) = error.hint() {
+                text.push_str(&format!(". {hint}"));
+            }
+            text
+        }
         Error::NotIncreasing { previous, next } => format!(
             "the agent returned {} after {}; OIDs must increase, so the walk stopped \
              here to avoid an endless loop (the agent is broken)",

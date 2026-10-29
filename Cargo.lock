@@ -329,14 +329,14 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "fero-win32"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "windows",
 ]
 
 [[package]]
 name = "ferosnmp-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "insta",
@@ -348,7 +348,7 @@ dependencies = [
 
 [[package]]
 name = "ferosnmp-gui"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "embed-manifest",
  "fero-win32",
@@ -511,7 +511,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "mib-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "insta",
  "mib-rs",
@@ -759,7 +759,7 @@ checksum = "d0d5d4b1981b8bbbb7aed204cae5726d683d5d6ac7e74ec54122ea28f315e7c8"
 
 [[package]]
 name = "snmp-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "aes",
  "des",
@@ -982,7 +982,7 @@ dependencies = [
 
 [[package]]
 name = "trap-rx"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "typenum"

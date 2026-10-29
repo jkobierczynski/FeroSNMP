@@ -84,10 +84,54 @@ the query buttons.
   *Copy Value* (or the column you clicked), *Copy OID*, *Show in MIB tree*
   (also **Enter** or a double click), *Export as CSV* (also **Ctrl+S**) and
   *Clear results*. Ctrl+C in the tree copies the node's numeric OID.
-- **Ctrl+F** searches the results when you used the Results list last
-  (**F3** for the next match); click the tree to search the MIBs again.
+- **Ctrl+F** searches the results (or the table) when you used that list
+  last (**F3** for the next match); click the tree to search the MIBs again.
 - The **Log** tab lists each query, every request with its request-id,
   retries and time, and how the query ended.
+
+### Tables
+
+**Table** (or **Query > Table**, **Ctrl+T**) walks the table named in the
+Object box (a table, its entry or any of its columns, such as `ifTable`,
+`ifEntry` or `ifDescr`) and shows it in the **Table** tab as rows and
+columns. Each row's instance is split into its INDEX values, read the way
+the MIB defines them: integers, IP addresses, strings with their length,
+fixed-size strings, OIDs, and the `IMPLIED` last index. A table that
+`AUGMENTS` another uses the other table's INDEX. A row whose instance does
+not fit the INDEX (an agent bug) is shown as `?.1.2.3`, with a note in the
+Log tab.
+
+- The columns are sized to the values once the walk is done.
+- **Ctrl+C** copies the selected rows, tab-separated. Right-click for *Copy*
+  the column you clicked, *Copy OID* of the cell, *Set* the cell, *Show in
+  MIB tree*, *Export table as CSV* (also **Ctrl+S** while the Table tab is
+  shown) and *Clear table*.
+- The values also arrive in the Results tab, one per line, as for a walk.
+
+This is the same table as `ferosnmp table` prints.
+
+### Writing values
+
+**Set...** (or **Query > Set value**, **F2**) opens the Set value dialog for
+the instance in the Object box, the selected result, or the table cell you
+right-clicked or double-clicked. The dialog fills in the current value when
+it is known, and checks what you type against the MIB as you type:
+
+- the type, the enumeration labels (offered in the Value list), ranges,
+  sizes, `BITS` names and display hints such as MAC addresses
+  (`00:1b:21:0a:ff:01`) and tenths (`-12.5`);
+- whether the object is writable at all.
+
+The line at the bottom says what will be sent, or why not. **Send as**
+picks another type than the MIB's (for example hex for a string), and is
+needed for an object no loaded MIB defines. To test how an agent handles a
+value the MIB does not allow, tick *Send even if the MIB does not allow it*.
+
+Set uses the Agent box like any query: the community needs write access
+(net-snmp: `rwcommunity`, or `rwuser` for SNMPv3). When the agent refuses,
+a message box says why, with a hint. The value the agent answered with
+shows in the Results tab, and in the Table tab when the cell is in the
+table shown. F5 and Enter never repeat a Set.
 
 To try a walk of 100,000 rows, start the test agent from WSL or PowerShell:
 
@@ -136,8 +180,10 @@ Bash), then add the repository's `corpus` folder in Settings.
 | `src/targets.rs` | Saved agents, and what the Agent box means. |
 | `src/query.rs` | The SNMP engine's thread, and handing results to the window in batches. |
 | `src/results.rs` | The Results tab's cells, copying and the CSV export. |
+| `src/table.rs` | The Table tab: rows, cells, copying, CSV, and finding the table for the Object box. |
+| `src/set_value.rs` | What the Set value dialog shows and checks. |
 | `src/oplog.rs` | The Log tab. |
-| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, the Results, Log and Diagnostics tabs, source and "why" windows, Settings and Agents dialogs. |
+| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, the Results, Table, Log and Diagnostics tabs, source and "why" windows, Settings, Agents and Set value dialogs. |
 
 Everything outside `src/ui/` is plain Rust and is tested on every platform
 (`cargo test -p ferosnmp-gui`). The Win32 helpers that are not specific to

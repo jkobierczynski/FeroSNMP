@@ -69,7 +69,7 @@ intended changes with `cargo insta test --accept -p ferosnmp-cli`.
 
 ### Query tests against net-snmp
 
-`apps/cli/tests/agent.rs` runs `ferosnmp get|next|bulk|walk` against a real
+`apps/cli/tests/agent.rs` runs `ferosnmp get|next|bulk|walk|table|set` against a real
 net-snmp agent that serves fixed values, and compares the output with stored
 snapshots. It needs `snmpd` and `python3`, so it runs on Linux (or WSL):
 
@@ -85,6 +85,10 @@ protocol net-snmp supports (`v3-sha256-aes192` and so on, see the end of
 `snmpd.conf`); `snmpv3_every_auth_and_privacy_protocol` walks with each of
 them, and `snmpv3_failures_are_explained` checks the error for a wrong user,
 password, protocol and security level.
+
+`set_values` writes the agent's `fstSettings` objects with community
+`private` and the SNMPv3 user `v3-writer`. Written values last until the
+agent restarts.
 
 Without `FEROSNMP_TEST_AGENT` these tests are skipped. The engine's own
 tests (`cargo test -p snmp-core`) use a small fake agent and run everywhere.
