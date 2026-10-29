@@ -2,7 +2,7 @@
 
 The FeroSNMP window: browse the loaded MIBs as a tree, search them, see
 everything about a node, and query SNMP agents (GET, GETNEXT, GETBULK and
-WALK over SNMPv1 and SNMPv2c). Runs on Windows 10 and Windows 11.
+WALK over SNMPv1, SNMPv2c and SNMPv3). Runs on Windows 10 and Windows 11.
 
 ## Building and running
 
@@ -60,7 +60,11 @@ the query buttons.
   **File > Agents** (or the **Agents...** button) saves agents with their
   own version, port, community, timeout, retries and max-repetitions. They
   are kept in `settings.toml`; the community is stored as plain text there,
-  like net-snmp's `snmp.conf`.
+  like net-snmp's `snmp.conf`. An SNMPv3 agent has a user, security level,
+  authentication and privacy protocol and a context name; its passwords go
+  to the Windows Credential Manager, never to `settings.toml`. The Log tab
+  shows the agent's engine ID, boots and uptime. See
+  [docs/snmpv3.md](../../docs/snmpv3.md).
 - **Object**: what to ask for. Clicking a node in the tree fills it in
   (`sysDescr.0` for a scalar, `IF-MIB::ifTable` for a table). You can type a
   name, `MODULE::name`, a name with an instance (`ifDescr.3`) or a numeric

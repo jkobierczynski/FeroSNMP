@@ -201,3 +201,177 @@ fn wrong_community_times_out() {
         run.stderr
     );
 }
+
+/// The SNMPv3 users in the test agent's snmpd.conf: authentication
+/// protocol and privacy protocol, as net-snmp and ferosnmp name them.
+const AUTH: [&str; 6] = ["MD5", "SHA", "SHA-224", "SHA-256", "SHA-384", "SHA-512"];
+const PRIV: [Option<&str>; 5] = [
+    None,
+    Some("DES"),
+    Some("AES"),
+    Some("AES-192"),
+    Some("AES-256"),
+];
+
+fn v3_user(auth: &str, privacy: Option<&str>) -> String {
+    let short = |name: &str| name.to_ascii_lowercase().replace('-', "");
+    format!(
+        "v3-{}-{}",
+        short(auth),
+        privacy.map_or("none".into(), short)
+    )
+}
+
+/// The options for one SNMPv3 user of the test agent.
+fn v3_args(auth: &str, privacy: Option<&str>) -> Vec<String> {
+    let mut args = vec![
+        "-u".to_string(),
+        v3_user(auth, privacy),
+        "-a".into(),
+        auth.into(),
+        "-A".into(),
+        "ferosnmp-auth".into(),
+    ];
+    if let Some(privacy) = privacy {
+        args.extend([
+            "-x".into(),
+            privacy.into(),
+            "-X".into(),
+            "ferosnmp-priv".into(),
+        ]);
+    }
+    args
+}
+
+#[test]
+fn snmpv3_every_auth_and_privacy_protocol() {
+    let Some(agent) = agent() else { return };
+    let expected = ok("walk", &agent, &["fstScalars", "-v", "2c"]);
+    assert!(!expected.is_empty());
+    let mut failed = Vec::new();
+    for auth in AUTH {
+        for privacy in PRIV {
+            let mut args = v3_args(auth, privacy);
+            args.push("fstScalars".into());
+            let args: Vec<&str> = args.iter().map(String::as_str).collect();
+            let run = query("walk", &agent, &args);
+            if run.code != 0 || run.stdout != expected {
+                failed.push(format!(
+                    "{auth}/{}: exit {}, {}",
+                    privacy.unwrap_or("no privacy"),
+                    run.code,
+                    run.stderr.trim()
+                ));
+            }
+        }
+    }
+    assert!(failed.is_empty(), "failed:\n{}", failed.join("\n"));
+    // And a user without authentication.
+    assert_eq!(
+        ok("walk", &agent, &["-u", "v3-noauth", "fstScalars"]),
+        expected
+    );
+}
+
+#[test]
+fn snmpv3_discover() {
+    let Some(agent) = agent() else { return };
+    let output = ok("discover", &agent, &[]);
+    let lines: Vec<&str> = output.lines().collect();
+    assert_eq!(lines.len(), 3, "{output}");
+    // net-snmp engine IDs start with 80 00 1f 88 (enterprise 8072, format bit).
+    assert!(lines[0].starts_with("engine ID:    80001f88"), "{output}");
+    assert!(lines[1].starts_with("engine boots: "), "{output}");
+    assert!(lines[2].starts_with("engine time:  "), "{output}");
+}
+
+/// Run a GET of sysName.0 with these SNMPv3 options and expect it to fail;
+/// returns the error message.
+fn v3_failure(agent: &str, args: &[&str]) -> String {
+    let mut all = args.to_vec();
+    all.extend(["-t", "0.5", "-r", "0", "1.3.6.1.2.1.1.5.0"]);
+    let run = query("get", agent, &all);
+    assert_ne!(run.code, 0, "{args:?} should fail");
+    assert!(run.stdout.is_empty(), "{}", run.stdout);
+    run.stderr
+}
+
+#[test]
+fn snmpv3_failures_are_explained() {
+    let Some(agent) = agent() else { return };
+    let user = v3_user("SHA-256", Some("AES"));
+    let message = v3_failure(&agent, &["-u", "nobody"]);
+    assert!(
+        message.contains("does not know SNMPv3 user \"nobody\" (usmStatsUnknownUserNames)"),
+        "{message}"
+    );
+    let message = v3_failure(
+        &agent,
+        &[
+            "-u",
+            &user,
+            "-a",
+            "SHA-256",
+            "-A",
+            "wrong-password",
+            "-X",
+            "ferosnmp-priv",
+        ],
+    );
+    assert!(message.contains("(usmStatsWrongDigests)"), "{message}");
+    // The wrong hash with the right password is a wrong digest too.
+    let message = v3_failure(
+        &agent,
+        &[
+            "-u",
+            &user,
+            "-a",
+            "SHA",
+            "-A",
+            "ferosnmp-auth",
+            "-X",
+            "ferosnmp-priv",
+        ],
+    );
+    assert!(message.contains("(usmStatsWrongDigests)"), "{message}");
+    // net-snmp drops what it cannot decrypt; the probe without privacy
+    // finds out why.
+    for privacy in [["-X", "wrong-password"], ["-x", "DES"]] {
+        let mut args = vec!["-u", &user, "-a", "SHA-256", "-A", "ferosnmp-auth"];
+        if privacy[0] == "-x" {
+            args.extend(["-X", "ferosnmp-priv"]);
+        }
+        args.extend(privacy);
+        let message = v3_failure(&agent, &args);
+        assert!(
+            message.contains("the privacy password or protocol differs"),
+            "{message}"
+        );
+    }
+    // A user without privacy asked for authPriv.
+    let auth_only = v3_user("MD5", None);
+    let message = v3_failure(
+        &agent,
+        &[
+            "-u",
+            &auth_only,
+            "-a",
+            "MD5",
+            "-A",
+            "ferosnmp-auth",
+            "-X",
+            "ferosnmp-priv",
+        ],
+    );
+    assert!(
+        message.contains("(usmStatsUnsupportedSecLevels)"),
+        "{message}"
+    );
+    // A privacy user asked for authNoPriv: the access rules say no.
+    let message = v3_failure(
+        &agent,
+        &["-u", &user, "-a", "SHA-256", "-A", "ferosnmp-auth"],
+    );
+    assert!(message.contains("authorizationError"), "{message}");
+    assert!(message.contains("hint: "), "{message}");
+}

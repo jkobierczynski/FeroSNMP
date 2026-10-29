@@ -9,7 +9,7 @@ use mib_core::Oid;
 use tokio::sync::{Semaphore, mpsc};
 
 use crate::error::{Error, ErrorStatus};
-use crate::session::{LogEntry, Request, Response, Session};
+use crate::session::{EngineInfo, LogEntry, Request, Response, Session, V3Cache};
 use crate::target::{Target, Version};
 use crate::value::{Value, Varbind};
 
@@ -48,6 +48,9 @@ pub enum Operation {
         /// Use GETBULK when the version allows it.
         bulk: bool,
     },
+    /// SNMPv3 only: discover the agent's engine ID, boots and time, which
+    /// arrive as [`Event::Engine`]. Nothing else is asked.
+    Discover,
 }
 
 impl Operation {
@@ -72,6 +75,8 @@ pub enum Event {
     Varbinds(Vec<Varbind>),
     /// A request was sent and answered (or not): for the operation log.
     Log(LogEntry),
+    /// SNMPv3: the agent's engine, when an operation starts using it.
+    Engine(EngineInfo),
     /// Something worth knowing that is not an error, such as falling back
     /// from GETBULK to GETNEXT.
     Notice(String),
@@ -189,17 +194,19 @@ impl Running {
 async fn serve(mut jobs: mpsc::UnboundedReceiver<Job>, config: EngineConfig) {
     // One semaphore per agent; entries are dropped when no job holds them.
     let mut limits: HashMap<String, Arc<Semaphore>> = HashMap::new();
+    // SNMPv3 engines and keys, shared by every operation.
+    let cache = V3Cache::default();
     while let Some(job) = jobs.recv().await {
         limits.retain(|_, limit| Arc::strong_count(limit) > 1);
         let limit = limits
             .entry(job.target.to_string())
             .or_insert_with(|| Arc::new(Semaphore::new(config.per_target_limit.max(1))))
             .clone();
-        tokio::spawn(run_job(job, limit));
+        tokio::spawn(run_job(job, limit, cache.clone()));
     }
 }
 
-async fn run_job(job: Job, limit: Arc<Semaphore>) {
+async fn run_job(job: Job, limit: Arc<Semaphore>, cache: V3Cache) {
     let Job {
         target,
         operation,
@@ -208,7 +215,7 @@ async fn run_job(job: Job, limit: Arc<Semaphore>) {
     let started = Instant::now();
     let work = async {
         let _permit = limit.acquire().await.map_err(|_| Error::EngineStopped)?;
-        let mut run = Run::open(&target, &events).await?;
+        let mut run = Run::open(&target, &events, cache).await?;
         let result = run.operation(&operation).await;
         // Report the requests made even when the operation failed.
         run.flush_log().await?;
@@ -240,9 +247,13 @@ struct Run<'a> {
 }
 
 impl<'a> Run<'a> {
-    async fn open(target: &Target, events: &'a mpsc::Sender<Event>) -> Result<Run<'a>, Error> {
+    async fn open(
+        target: &Target,
+        events: &'a mpsc::Sender<Event>,
+        cache: V3Cache,
+    ) -> Result<Run<'a>, Error> {
         Ok(Run {
-            session: Session::open(target).await?,
+            session: Session::open(target, cache).await?,
             events,
             varbinds: 0,
             requests: 0,
@@ -257,6 +268,9 @@ impl<'a> Run<'a> {
         for entry in self.session.take_log() {
             self.requests += 1;
             self.send(Event::Log(entry)).await?;
+        }
+        if let Some(info) = self.session.take_engine_info() {
+            self.send(Event::Engine(info)).await?;
         }
         Ok(())
     }
@@ -319,6 +333,7 @@ impl<'a> Run<'a> {
                 max_repetitions,
                 bulk,
             } => self.walk(root, *max_repetitions, *bulk).await,
+            Operation::Discover => self.session.discover().await,
         }
     }
 

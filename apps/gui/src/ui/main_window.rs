@@ -97,7 +97,8 @@ use super::icons::{NodeIcons, image_for};
 use super::text_window::{Content, TextWindow};
 use super::toolbar::Toolbar;
 use super::{
-    WM_APP_LOADED, WM_APP_QUERY, agents_dialog, details, error_box, id, send, settings_dialog, tree,
+    WM_APP_LOADED, WM_APP_QUERY, agents_dialog, credentials, details, error_box, id, send,
+    settings_dialog, tree,
 };
 
 /// Sizes at 96 DPI.
@@ -268,7 +269,7 @@ impl MainWindow {
     /// Read the settings and create the (still hidden) window.
     pub fn create() -> windows::core::Result<Rc<MainWindow>> {
         let settings_path = Settings::default_path();
-        let (settings, settings_error) = match settings_path.as_deref().map(Settings::load) {
+        let (mut settings, settings_error) = match settings_path.as_deref().map(Settings::load) {
             Some(Ok(settings)) => (settings, None),
             Some(Err(error)) => (
                 Settings::default(),
@@ -279,6 +280,7 @@ impl MainWindow {
             ),
             None => (Settings::default(), None),
         };
+        credentials::load_passwords(&mut settings.targets);
 
         let dpi = dpi::for_system();
         let window = Rc::new(MainWindow {
@@ -1801,6 +1803,7 @@ impl MainWindow {
                 Event::Varbinds(varbinds) => self.results.borrow_mut().extend(varbinds),
                 Event::Log(entry) => self.log_line(&agent, oplog::request_text(&entry)),
                 Event::Notice(text) => self.log_line(&agent, format!("Note: {text}")),
+                Event::Engine(info) => self.log_line(&agent, oplog::engine_text(&info)),
                 Event::Finished(_) | Event::Failed(_) => end = Some(event),
             }
         }
@@ -1932,6 +1935,15 @@ impl MainWindow {
             return;
         };
         let text = edited.selected.clone().unwrap_or(current);
+        if let Err(error) = credentials::save_passwords(&targets, &edited.targets) {
+            error_box(
+                Some(self.hwnd()),
+                &format!(
+                    "An SNMPv3 password could not be stored in the Windows Credential \
+                     Manager, so it will be asked for again after a restart.\n\n{error}"
+                ),
+            );
+        }
         {
             let mut settings = self.settings.borrow_mut();
             settings.targets = edited.targets;
@@ -2682,6 +2694,9 @@ fn describe(error: &Error, mibs: Option<&MibSet>) -> String {
         Error::BulkNeedsV2 => {
             format!("{error}. Use Walk or Next, or switch the agent to SNMPv2c in File > Agents.")
         }
-        other => other.to_string(),
+        other => match other.hint() {
+            Some(hint) => format!("{other}. {hint}"),
+            None => other.to_string(),
+        },
     }
 }

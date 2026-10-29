@@ -80,6 +80,12 @@ FEROSNMP_TEST_AGENT=127.0.0.1:11161 cargo test -p ferosnmp-cli --test agent
 crates/snmp-core/tests/agent/run-agent.sh stop
 ```
 
+The test agent also has an SNMPv3 user for every authentication and privacy
+protocol net-snmp supports (`v3-sha256-aes192` and so on, see the end of
+`snmpd.conf`); `snmpv3_every_auth_and_privacy_protocol` walks with each of
+them, and `snmpv3_failures_are_explained` checks the error for a wrong user,
+password, protocol and security level.
+
 Without `FEROSNMP_TEST_AGENT` these tests are skipped. The engine's own
 tests (`cargo test -p snmp-core`) use a small fake agent and run everywhere.
 
@@ -129,7 +135,8 @@ Every pull request must pass these checks:
 Three more jobs run but are not required: **Build and test (Linux)** (also
 builds the docs), **Full MIB corpus** (downloads the vendor MIBs, so it
 depends on vendor sites being reachable) and **Query tests (net-snmp)**
-(the golden-file query tests against net-snmp `snmpd`).
+(the golden-file query tests and the SNMPv3 protocol matrix against
+net-snmp `snmpd`).
 
 ## Releases
 

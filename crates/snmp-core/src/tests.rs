@@ -245,6 +245,8 @@ struct Outcome {
     varbinds: Vec<Varbind>,
     log: Vec<crate::LogEntry>,
     notices: Vec<String>,
+    #[allow(dead_code)]
+    engines: Vec<crate::EngineInfo>,
     error: Option<Error>,
 }
 
@@ -260,6 +262,7 @@ async fn collect(mut running: crate::Running) -> Outcome {
             Event::Varbinds(varbinds) => outcome.varbinds.extend(varbinds),
             Event::Log(entry) => outcome.log.push(entry),
             Event::Notice(text) => outcome.notices.push(text),
+            Event::Engine(info) => outcome.engines.push(info),
             Event::Finished(summary) => {
                 assert_eq!(summary.varbinds, outcome.varbinds.len());
                 assert_eq!(summary.requests as usize, outcome.log.len());

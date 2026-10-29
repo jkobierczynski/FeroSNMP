@@ -52,10 +52,10 @@ multiple-versions = "warn"
 wildcards = "deny"
 # Path dependencies inside the workspace have no version; that is fine.
 allow-wildcard-paths = true
-# OpenSSL is not used: the decision between pure-Rust crypto and OpenSSL
-# (needed for SNMPv3 in M7) is still open, so nothing may pull it in by accident.
+# SNMPv3 uses pure-Rust crypto (RustCrypto), decided in M7, so OpenSSL is
+# not needed; nothing may pull it in by accident.
 deny = [
-    { crate = "openssl-sys", reason = "crypto backend not decided yet (M7)" },
+    { crate = "openssl-sys", reason = "SNMPv3 uses pure-Rust crypto (RustCrypto)" },
 ]
 
 [sources]

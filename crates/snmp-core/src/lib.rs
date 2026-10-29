@@ -1,5 +1,5 @@
-//! The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK and WALK over SNMPv1
-//! and SNMPv2c, on tokio.
+//! The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK and WALK over SNMPv1,
+//! SNMPv2c and SNMPv3 (USM, with pure-Rust crypto), on tokio.
 //!
 //! What a MIB browser needs from an SNMP engine: timeouts and retries, walks
 //! that stop safely, a limit on parallel requests per agent, an operation
@@ -9,10 +9,11 @@
 //!
 //! # Overview
 //!
-//! - A [`Target`] is an agent plus version, community, timeout and retries.
+//! - A [`Target`] is an agent plus version, community or SNMPv3 user
+//!   ([`Usm`]), timeout and retries.
 //! - An [`Operation`] is what to do: [`Get`](Operation::Get),
 //!   [`GetNext`](Operation::GetNext), [`GetBulk`](Operation::GetBulk) or
-//!   [`Walk`](Operation::Walk).
+//!   [`Walk`](Operation::Walk), or for SNMPv3 [`Discover`](Operation::Discover).
 //! - The [`Engine`] runs operations as tokio tasks. [`Engine::submit`]
 //!   returns a [`Running`] handle that streams [`Event`]s: results, log
 //!   entries, and finally [`Finished`](Event::Finished) or
@@ -57,18 +58,23 @@ mod format;
 mod object;
 mod session;
 mod target;
+mod usm;
+mod v3;
 mod value;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_v3;
 
 pub use display_hint::{format_integer, format_octets};
 pub use engine::{
     DEFAULT_MAX_REPETITIONS, Engine, EngineConfig, Event, Operation, Running, Summary,
 };
-pub use error::{Error, ErrorStatus};
+pub use error::{Error, ErrorStatus, SecurityProblem};
 pub use format::{Formatter, ValueText, raw_line};
 pub use object::{ObjectError, resolve_object};
-pub use session::LogEntry;
+pub use session::{EngineInfo, LogEntry, uptime_text};
 pub use target::{DEFAULT_PORT, ParseTargetError, Target, Version};
+pub use usm::{AuthProtocol, PrivProtocol, SecurityLevel, Usm, hex, parse_hex};
 pub use value::{Value, Varbind, tag};

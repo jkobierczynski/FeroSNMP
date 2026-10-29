@@ -1,7 +1,7 @@
 # snmp-core
 
-The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK and WALK over SNMPv1 and
-SNMPv2c on tokio, with timeouts, retries, a per-agent concurrency limit, an
+The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK and WALK over SNMPv1,
+SNMPv2c and SNMPv3 (USM) on tokio, with timeouts, retries, a per-agent concurrency limit, an
 operation log, and value formatting through the MIBs of `mib-core` (enum
 labels, BITS names, DISPLAY-HINTs, units).
 
@@ -26,6 +26,30 @@ splits a value into type and text for table columns.
 `examples/big_agent.rs` is a tiny agent with a made-up table of any size,
 for trying walks of 100,000 rows and more:
 `cargo run --release -p snmp-core --example big_agent -- 100000`.
+
+## SNMPv3
+
+`Target::with_usm(Usm::new("user").with_auth(..).with_privacy(..))` switches
+a target to SNMPv3. The code:
+
+- `src/usm.rs`: protocols, password-to-key and key localization (RFC 3414
+  A.2), HMAC (RFC 3414, RFC 7860), DES-CBC (RFC 3414) and AES-CFB (RFC 3826)
+  with both AES-192/256 key extensions. Pure Rust, on the RustCrypto
+  crates; tested with the RFC 3414, RFC 4231 and NIST SP 800-38A vectors.
+- `src/v3.rs`: SNMPv3 messages (RFC 3412): building, authenticating and
+  encrypting requests; checking, decrypting and reading responses; what a
+  Report means.
+- `src/session.rs`: discovery of the engine ID, boots and time (RFC 3414,
+  4), cached per agent for the engine's lifetime together with the
+  localized keys; resynchronizing once on `notInTimeWindow`, rediscovering
+  once on `unknownEngineID`; every retry is a new message (msgID, time,
+  salt) for the same request-id. When an `authPriv` request gets no answer,
+  the same user is asked once without privacy: if that is answered, the
+  privacy settings are wrong (net-snmp drops what it cannot decrypt instead
+  of reporting `decryptionErrors`).
+
+`Operation::Discover` only discovers; `Event::Engine` reports the engine an
+operation uses. Errors are `Error::Security` with a `SecurityProblem`.
 
 ## Tests
 
@@ -64,10 +88,10 @@ does timeouts, retries with the same request-id, and skips late answers.
 
 Gaps to fill later:
 
-- **M7 (SNMPv3):** snmp2's USM code is only reachable through
-  `AsyncSession`. Options: contribute fixes upstream (public encoder, value
-  decoding, timeouts), or build v3 messages with `rasn-snmp` and our own USM
-  on the RustCrypto crates snmp2 uses anyway.
+- **M7 (SNMPv3):** done without snmp2's USM, whose encoder is only
+  reachable through `AsyncSession`: the v3 messages are built in `src/v3.rs`
+  next to the v1/v2c codec, and the USM is our own on the RustCrypto crates
+  (see "SNMPv3" above).
 - **M9 (traps):** decode notification variable lists with the same value
   decoder as `codec.rs`, not snmp2's `Varbinds`.
 
