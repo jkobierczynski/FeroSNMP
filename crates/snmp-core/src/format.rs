@@ -105,6 +105,28 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    /// The value split in two for a table column each: its type, such as
+    /// `INTEGER`, and its text, such as `up(1)`. For the exceptions
+    /// (`noSuchObject` ...) the type is the exception's name.
+    pub fn value_text(&mut self, varbind: &Varbind) -> ValueText {
+        let line = self.value(varbind);
+        let exception = |text: String| ValueText {
+            type_name: varbind.value.type_name().to_string(),
+            text,
+        };
+        match &varbind.value {
+            Value::Null => exception(String::new()),
+            value if value.is_exception() => exception(line),
+            _ => match line.split_once(": ") {
+                Some((type_name, text)) => ValueText {
+                    type_name: type_name.to_string(),
+                    text: text.to_string(),
+                },
+                None => exception(line),
+            },
+        }
+    }
+
     fn syntax_of(&mut self, oid: &Oid) -> Option<Rc<ObjectSyntax>> {
         let mibs = self.mibs?;
         let lookup = mibs.lookup(oid);
@@ -128,6 +150,16 @@ impl<'a> Formatter<'a> {
             })
             .clone()
     }
+}
+
+/// A value as two table cells; see [`Formatter::value_text`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValueText {
+    /// The type as net-snmp names it: `INTEGER`, `STRING`, `Hex-STRING`,
+    /// `Timeticks`, ...
+    pub type_name: String,
+    /// The value without its type.
+    pub text: String,
 }
 
 /// The value by its wire type alone, without MIB information.
@@ -297,6 +329,32 @@ mod tests {
             assert_eq!(f.value(&varbind(value)), expected);
         }
         assert_eq!(f.line(&varbind(Value::Null)), "1.3.6.1.2.1.1.1.0 = NULL");
+    }
+
+    #[test]
+    fn value_columns() {
+        let mut f = Formatter::new(None);
+        let mut text = |value| {
+            let ValueText { type_name, text } = f.value_text(&varbind(value));
+            (type_name, text)
+        };
+        let pair = |a: &str, b: &str| (a.to_string(), b.to_string());
+        assert_eq!(
+            text(Value::OctetString(b"a: b".to_vec())),
+            pair("STRING", "\"a: b\"")
+        );
+        assert_eq!(
+            text(Value::TimeTicks(4_523)),
+            pair("Timeticks", "(4523) 0:00:45.23")
+        );
+        assert_eq!(text(Value::Null), pair("NULL", ""));
+        assert_eq!(
+            text(Value::NoSuchInstance),
+            pair(
+                "noSuchInstance",
+                "No Such Instance currently exists at this OID"
+            )
+        );
     }
 
     #[test]

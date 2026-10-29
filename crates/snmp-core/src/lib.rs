@@ -54,6 +54,7 @@ mod display_hint;
 mod engine;
 mod error;
 mod format;
+mod object;
 mod session;
 mod target;
 mod value;
@@ -66,7 +67,8 @@ pub use engine::{
     DEFAULT_MAX_REPETITIONS, Engine, EngineConfig, Event, Operation, Running, Summary,
 };
 pub use error::{Error, ErrorStatus};
-pub use format::{Formatter, raw_line};
+pub use format::{Formatter, ValueText, raw_line};
+pub use object::{ObjectError, resolve_object};
 pub use session::LogEntry;
 pub use target::{DEFAULT_PORT, ParseTargetError, Target, Version};
 pub use value::{Value, Varbind, tag};
