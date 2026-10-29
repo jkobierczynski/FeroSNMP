@@ -1,19 +1,24 @@
 //! The Win32 user interface. Windows only.
 //!
 //! - [`main_window`]: the main window, which owns everything below.
-//! - [`toolbar`]: the rebar at the top with buttons and the search box.
+//! - [`toolbar`]: the rebar at the top: buttons, the search box, and the
+//!   Agent and Object boxes with the query buttons.
 //! - [`tree`]: the MIB tree on the left, filled in as nodes are expanded.
 //! - [`details`]: the properties list and description on the right.
 //! - [`icons`]: the small pictures in the tree, one per kind of node.
 //! - [`settings_dialog`]: the Settings dialog.
-//! - [`diagnostics_panel`]: the Diagnostics tab along the bottom.
+//! - [`agents_dialog`]: the Agents dialog, for saved agents.
+//! - [`bottom_panel`]: the Results, Log and Diagnostics tabs along the bottom.
 //! - [`text_window`]: the source viewer and the "Why this symbol?" report.
 //!
 //! All windows belong to the one UI thread that runs [`run`]. MIBs are loaded
-//! on another thread (see [`crate::loading`]), which posts the result back.
+//! on another thread (see [`crate::loading`]), which posts the result back,
+//! and SNMP queries run on the engine's thread (see [`crate::query`]), which
+//! posts a message whenever results are waiting.
 
+mod agents_dialog;
+mod bottom_panel;
 mod details;
-mod diagnostics_panel;
 mod icons;
 mod main_window;
 mod settings_dialog;
@@ -43,6 +48,10 @@ use self::main_window::MainWindow;
 /// `Box<Loaded>` turned into a raw pointer; the window takes it back.
 pub const WM_APP_LOADED: u32 = WM_APP + 1;
 
+/// Posted by the SNMP engine's thread when results of a query are waiting.
+/// The `wparam` is the query's number; the window ignores older queries.
+pub const WM_APP_QUERY: u32 = WM_APP + 2;
+
 /// Control and command ids.
 pub mod id {
     /// The MIB tree.
@@ -63,12 +72,22 @@ pub mod id {
     pub const TABS: u16 = 107;
     /// The Diagnostics list.
     pub const DIAGNOSTICS: u16 = 108;
+    /// The Results list.
+    pub const RESULTS: u16 = 109;
+    /// The Log list.
+    pub const LOG: u16 = 110;
+    /// The Agent box in the rebar.
+    pub const AGENT: u16 = 111;
+    /// The Object box in the rebar.
+    pub const OBJECT: u16 = 112;
+    /// The toolbar with the query buttons.
+    pub const QUERY_TOOLBAR: u16 = 113;
 
     /// Enter, from the dialog keyboard handling (the predefined `IDOK`).
     pub const ENTER: u16 = 1;
     /// Escape, from the dialog keyboard handling (the predefined `IDCANCEL`).
     pub const ESCAPE: u16 = 2;
-    /// File > Reload MIBs (F5).
+    /// File > Reload MIBs (Ctrl+R).
     pub const RELOAD: u16 = 200;
     /// File > Settings.
     pub const SETTINGS: u16 = 201;
@@ -76,6 +95,10 @@ pub mod id {
     pub const EXPORT: u16 = 203;
     /// File > Exit.
     pub const EXIT: u16 = 202;
+    /// File > Agents (also a toolbar button).
+    pub const AGENTS: u16 = 204;
+    /// File > Export results (Ctrl+S).
+    pub const EXPORT_RESULTS: u16 = 205;
     /// Edit > Find (Ctrl+F): go to the search box.
     pub const FIND: u16 = 210;
     /// Edit > Find next (F3).
@@ -86,6 +109,30 @@ pub mod id {
     pub const WHY: u16 = 213;
     /// View > Source of the selected diagnostic (also Enter or a double click).
     pub const SHOW_SOURCE: u16 = 214;
+    /// Edit > Copy (Ctrl+C).
+    pub const COPY: u16 = 215;
+    /// Query > Get.
+    pub const GET: u16 = 230;
+    /// Query > Get next.
+    pub const NEXT: u16 = 231;
+    /// Query > Get bulk.
+    pub const BULK: u16 = 232;
+    /// Query > Walk.
+    pub const WALK: u16 = 233;
+    /// Query > Repeat (F5).
+    pub const REPEAT: u16 = 234;
+    /// Query > Cancel (Esc, also a toolbar button).
+    pub const CANCEL: u16 = 235;
+    /// View > Raw values (Ctrl+Shift+R, also a toolbar button).
+    pub const RAW: u16 = 240;
+    /// Context menu of the Results list: copy the cell under the mouse.
+    pub const COPY_CELL: u16 = 250;
+    /// Context menu of the Results list: copy the numeric OIDs.
+    pub const COPY_OID: u16 = 251;
+    /// Context menu of the Results list: show the object in the MIB tree.
+    pub const SHOW_IN_TREE: u16 = 252;
+    /// Context menu of the Results list: forget the results.
+    pub const CLEAR_RESULTS: u16 = 253;
     /// Help > About.
     pub const ABOUT: u16 = 220;
 }
@@ -128,7 +175,11 @@ fn message_loop(main: HWND) {
         accelerator(FCONTROL, u16::from(b'F'), id::FIND),
         accelerator(FVIRTKEY, VK_F3.0, id::FIND_NEXT),
         accelerator(FSHIFT, VK_F3.0, id::FIND_PREVIOUS),
-        accelerator(FVIRTKEY, VK_F5.0, id::RELOAD),
+        accelerator(FVIRTKEY, VK_F5.0, id::REPEAT),
+        accelerator(FCONTROL, u16::from(b'R'), id::RELOAD),
+        accelerator(FCONTROL | FSHIFT, u16::from(b'R'), id::RAW),
+        accelerator(FCONTROL, u16::from(b'C'), id::COPY),
+        accelerator(FCONTROL, u16::from(b'S'), id::EXPORT_RESULTS),
         accelerator(FCONTROL, u16::from(b'W'), id::WHY),
         accelerator(FCONTROL, u16::from(b'E'), id::EXPORT),
     ];
@@ -138,7 +189,7 @@ fn message_loop(main: HWND) {
         let mut msg = MSG::default();
         // GetMessageW returns 0 for WM_QUIT and -1 on error; stop on both.
         while GetMessageW(&mut msg, None, 0, 0).0 > 0 {
-            // Keyboard shortcuts first (Ctrl+F, F3, F5) ...
+            // Keyboard shortcuts first (Ctrl+F, F3, F5, Ctrl+C) ...
             if let Some(table) = table
                 && TranslateAcceleratorW(main, table, &msg) != 0
             {

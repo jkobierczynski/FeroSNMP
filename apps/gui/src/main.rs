@@ -18,8 +18,12 @@ mod file_stamps;
 mod find;
 mod loading;
 mod node_info;
+mod oplog;
+mod query;
+mod results;
 mod rich_text;
 mod settings;
+mod targets;
 #[cfg(test)]
 mod test_support;
 #[cfg(windows)]

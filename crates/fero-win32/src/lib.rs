@@ -15,6 +15,7 @@
 //! - `dialog`: modal dialogs built in memory, so no resource compiler is
 //!   needed.
 //! - `shell`: the standard "pick a folder" dialog.
+//! - `clipboard`: putting text on the clipboard.
 //!
 //! Everything except [`splitter`] only exists on Windows. The splitter is
 //! plain arithmetic, so it builds and is tested everywhere.
@@ -23,6 +24,8 @@
 
 pub mod splitter;
 
+#[cfg(windows)]
+pub mod clipboard;
 #[cfg(windows)]
 pub mod dialog;
 #[cfg(windows)]
