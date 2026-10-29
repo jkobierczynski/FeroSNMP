@@ -1,0 +1,18 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stdout
+---
+HintLevel as used in HINT-WRONG-IMPORT-MIB (type lookup, normal strictness)
+
+Does not resolve.
+IMPORTS in HINT-WRONG-IMPORT-MIB: FROM SNMPv2-TC, but SNMPv2-TC does not define HintLevel
+Fallbacks for names that are not imported: standard SMI modules
+
+Definitions:
+    HINT-DEFS-MIB::HintLevel  type  crates/mib-core/tests/hints/HINT-DEFS-MIB
+
+Unresolved references to HintLevel:
+    HINT-WRONG-IMPORT-MIB (import): the module it is imported from does not define it
+    HINT-WRONG-IMPORT-MIB (type): no such type is defined or imported
+
+1 more unresolved reference to HintLevel in 1 other module.

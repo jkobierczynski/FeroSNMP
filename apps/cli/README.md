@@ -54,12 +54,37 @@ reported.
 for an import in other modules when the module named in `IMPORTS` lacks it.
 `--strict` also reports style and informational problems.
 
+Most problems come with a fix hint on the line below, for example which
+module to import a missing symbol from, or which file defines the module an
+import names:
+
+```text
+mibs/ACME-MIB:18:17: error: ACME-MIB: unresolved type: "acmeLevel" references unknown type "AcmeLevel" [type-unknown]
+    hint: AcmeLevel is defined in ACME-TC-MIB: add `AcmeLevel FROM ACME-TC-MIB` to the IMPORTS.
+```
+
+In JSON output the hint is the `hint` field.
+
+## Why does a name resolve (or not)?
+
+```sh
+ferosnmp mib -M corpus why ifInOctets
+ferosnmp mib -M mibs why ACME-MIB::acmeLevel     # as seen from ACME-MIB's IMPORTS
+ferosnmp mib -M mibs why --lint ACME-MIB::acmeLevel
+```
+
+`why` explains how a name is looked up: which modules define it, what the
+`IMPORTS` of the module say, which step found it (a direct import, a
+well-known SMI name, a search of other modules, ...) and, when it fails,
+every place that refers to it and why that did not resolve. `--lint` and
+`--strict` look the name up as `ferosnmp lint` does.
+
 ## Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success; `lint` found nothing at or above `--fail-on` |
-| 1 | `mib show` or `mib search` found nothing, or `lint` found problems at or above `--fail-on` (default `error`) |
+| 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, or `lint` found problems at or above `--fail-on` (default `error`) |
 | 2 | The command could not run: bad arguments, or a file or folder that cannot be read |
 
 For a CI job that should also fail on warnings, use

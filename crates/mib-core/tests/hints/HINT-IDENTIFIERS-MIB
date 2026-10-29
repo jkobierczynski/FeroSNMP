@@ -1,0 +1,35 @@
+-- Names that break the SMI identifier rules.
+HINT-IDENTIFIERS-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, Integer32, enterprises
+        FROM SNMPv2-SMI;
+
+hintIdentifiersMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Bad identifiers."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99996 }
+
+bad_underscore OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "An underscore in the name."
+    ::= { hintIdentifiersMib 1 }
+
+bad-hyphen OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A hyphen in an SMIv2 name."
+    ::= { hintIdentifiersMib 2 }
+
+badEndsWithHyphen- OBJECT IDENTIFIER ::= { hintIdentifiersMib 3 }
+
+thisObjectNameIsMuchLongerThanSixtyFourCharactersWhichTheSmiForbidsX OBJECT IDENTIFIER ::= { hintIdentifiersMib 4 }
+
+END

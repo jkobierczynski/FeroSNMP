@@ -160,9 +160,11 @@ impl Settings {
         std::fs::rename(&temporary, path).map_err(io_error)
     }
 
-    /// The MIB library these settings describe.
-    pub fn library(&self) -> MibLibrary {
-        self.mib_folders.iter().fold(
+    /// The MIB library these settings describe, with `extra` folders or
+    /// files searched first: the ones dropped on the window, which are kept
+    /// for this session only.
+    pub fn library_with(&self, extra: &[PathBuf]) -> MibLibrary {
+        extra.iter().chain(&self.mib_folders).fold(
             MibLibrary::new()
                 .with_system_folders(self.use_system_folders)
                 .with_strictness(self.strictness.into()),

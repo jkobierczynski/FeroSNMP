@@ -1,0 +1,36 @@
+-- Imports from a module that is in no MIB folder, and from a module whose
+-- file is named after it but defines a module with another name.
+HINT-MISSING-MODULE-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises
+        FROM SNMPv2-SMI
+    acmeRoot
+        FROM ACME-NOWHERE-MIB
+    hintRenamedRoot
+        FROM HINT-RENAMED;
+
+hintMissingModuleMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Imports from modules that cannot be found."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99993 }
+
+acmeThing OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Under a node from a module that is not loaded."
+    ::= { acmeRoot 1 }
+
+renamedThing OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "Under a node from a misnamed module."
+    ::= { hintRenamedRoot 1 }
+
+END

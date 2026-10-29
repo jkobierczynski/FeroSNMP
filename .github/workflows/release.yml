@@ -1,0 +1,105 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds the programs, checks that the tag
+# matches the version in Cargo.toml, and publishes a GitHub release with the
+# binaries and their SHA-256 checksums attached.
+#
+#   git tag -a v0.1.0 -m "FeroSNMP 0.1.0"
+#   git push origin v0.1.0
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    name: Build (Windows)
+    runs-on: windows-latest
+    env:
+      # Link the C runtime statically, so the programs run on a plain
+      # Windows 10 or 11 without the Visual C++ redistributable.
+      RUSTFLAGS: -C target-feature=+crt-static
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - name: Check that the tag matches the version
+        shell: bash
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 --locked |
+            python -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name'] == 'ferosnmp-cli'))")
+          test "v$version" = "$GITHUB_REF_NAME" ||
+            { echo "::error::Tag $GITHUB_REF_NAME does not match version $version in Cargo.toml"; exit 1; }
+      - run: cargo test --workspace --locked
+      - run: cargo build --release --locked -p ferosnmp-cli -p ferosnmp-gui
+      - name: Package
+        shell: pwsh
+        run: |
+          $name = "ferosnmp-$env:GITHUB_REF_NAME-windows-x64"
+          New-Item -ItemType Directory -Path "dist/$name" | Out-Null
+          Copy-Item target/release/ferosnmp.exe, target/release/ferosnmp-gui.exe "dist/$name/"
+          Copy-Item LICENSE, CHANGELOG.md "dist/$name/"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.zip
+          if-no-files-found: error
+
+  linux:
+    name: Build (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - run: cargo test --workspace --locked
+      - run: cargo build --release --locked -p ferosnmp-cli
+      - name: Package
+        run: |
+          name="ferosnmp-$GITHUB_REF_NAME-linux-x64"
+          mkdir -p "dist/$name"
+          cp target/release/ferosnmp LICENSE CHANGELOG.md "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - name: Release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The section of CHANGELOG.md for this version, without its heading.
+          awk -v v="$version" '
+            /^## / { if (found) exit; found = index($0, "[" v "]") > 0; next }
+            found
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || echo "FeroSNMP $version" > notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --title "FeroSNMP ${GITHUB_REF_NAME#v}"
+          --notes-file notes.md
+          --verify-tag

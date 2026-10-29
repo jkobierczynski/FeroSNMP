@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use mib_core::{MibSet, Node, NodeKind, Oid, Pattern};
+use mib_core::{MibSet, Node, NodeKind, Oid, Pattern, TraceOutcome};
 
 use crate::{CliError, Status};
 
@@ -224,4 +224,16 @@ pub fn search(set: &MibSet, pattern: &str, out: &mut impl Write) -> Result<Statu
         writeln!(out, "{name:name_width$}  {oid:oid_width$}  {kind}")?;
     }
     Ok(Status::Success)
+}
+
+/// `ferosnmp mib why`: explain how a name resolves.
+pub fn why(set: &MibSet, symbol: &str, out: &mut impl Write) -> Result<Status, CliError> {
+    let trace = set
+        .trace(symbol)
+        .map_err(|error| CliError::Message(error.to_string()))?;
+    write!(out, "{trace}")?;
+    Ok(match trace.outcome {
+        TraceOutcome::Resolved { .. } => Status::Success,
+        TraceOutcome::Ambiguous | TraceOutcome::Missing => Status::Problems,
+    })
 }

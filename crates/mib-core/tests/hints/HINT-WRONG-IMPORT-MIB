@@ -1,0 +1,26 @@
+-- Imports HintLevel from SNMPv2-TC, but HINT-DEFS-MIB defines it.
+HINT-WRONG-IMPORT-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises
+        FROM SNMPv2-SMI
+    HintLevel
+        FROM SNMPv2-TC;
+
+hintWrongImportMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Imports a symbol from the wrong module."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99992 }
+
+wrongLevel OBJECT-TYPE
+    SYNTAX      HintLevel
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "HintLevel is imported from the wrong module."
+    ::= { hintWrongImportMib 1 }
+
+END

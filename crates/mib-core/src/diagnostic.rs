@@ -74,7 +74,8 @@ pub struct Location {
 
 /// One problem found while reading or resolving MIB modules.
 ///
-/// Its [`Display`](fmt::Display) form is the usual compiler style:
+/// Its [`Display`](fmt::Display) form is the usual compiler style, without the
+/// hint:
 ///
 /// ```text
 /// corpus/ietf/BFD-STD-MIB:14:6: error: BFD-STD-MIB: unresolved import: ... [import-module-not-found]
@@ -91,6 +92,13 @@ pub struct Diagnostic {
     pub location: Option<Location>,
     /// Human-readable description.
     pub message: String,
+    /// A concrete suggestion for fixing the problem, when one is known, such
+    /// as "add `DisplayString` to the IMPORTS FROM SNMPv2-TC".
+    pub hint: Option<String>,
+    /// The symbol the problem is about, when it names one: the identifier
+    /// that could not be resolved, or the badly formed name. Use it with
+    /// [`MibSet::trace`](crate::MibSet::trace) to see why it did not resolve.
+    pub symbol: Option<String>,
 }
 
 impl fmt::Display for Diagnostic {

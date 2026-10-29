@@ -1,0 +1,34 @@
+-- Defines the symbols the other hint fixtures forget to import or import
+-- from the wrong module.
+HINT-DEFS-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, Integer32, enterprises
+        FROM SNMPv2-SMI
+    TEXTUAL-CONVENTION
+        FROM SNMPv2-TC;
+
+hintDefsMib MODULE-IDENTITY
+    LAST-UPDATED "202610280000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Definitions used by the fix hint fixtures."
+    REVISION     "202610280000Z"
+    DESCRIPTION  "Initial version."
+    ::= { enterprises 99990 }
+
+HintLevel ::= TEXTUAL-CONVENTION
+    STATUS       current
+    DESCRIPTION  "A level from 0 to 10."
+    SYNTAX       Integer32 (0..10)
+
+hintObjects OBJECT IDENTIFIER ::= { hintDefsMib 1 }
+
+hintLevel OBJECT-TYPE
+    SYNTAX      HintLevel
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "The current level."
+    ::= { hintObjects 1 }
+
+END

@@ -1,0 +1,12 @@
+-- The file is called HINT-RENAMED.my, but the module inside is
+-- HINT-RENAMED-MIB. Other modules that import FROM HINT-RENAMED (the file
+-- name) cannot find it.
+HINT-RENAMED-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    enterprises
+        FROM SNMPv2-SMI;
+
+hintRenamedRoot OBJECT IDENTIFIER ::= { enterprises 99994 }
+
+END

@@ -126,36 +126,67 @@ corpus/fetched/cisco/CISCO-PRODUCTS-MIB.my:22:1: minor: CISCO-PRODUCTS-MIB: revi
 corpus/fetched/cisco/CISCO-PRODUCTS-MIB.my:40:18: minor: CISCO-PRODUCTS-MIB: revision 202506130000Z is after LAST-UPDATED 201604290000Z [revision-after-update]
 corpus/fetched/cisco/CISCO-PRODUCTS-MIB.my:49:12: minor: CISCO-PRODUCTS-MIB: revision 202504210000Z is after LAST-UPDATED 201604290000Z [revision-after-update]
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:59:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonRttType" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonRttType, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:60:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMplsVpnMonRttType" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMplsVpnMonRttType, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:61:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMplsVpnMonLpdFailureSense" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMplsVpnMonLpdFailureSense, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:62:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMplsVpnMonLpdGrpStatus" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMplsVpnMonLpdGrpStatus, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:63:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonProtocol" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonProtocol, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:64:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonCodecType" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonCodecType, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:65:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonLSPPingReplyMode" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonLSPPingReplyMode, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:66:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonTargetAddress" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonTargetAddress, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:67:5: error: CISCO-RTTMON-MIB: unresolved import: "RttMonReactVar" from "CISCO-RTTMON-TC-MIB" (symbol_not_exported) [import-not-found]
+    hint: CISCO-RTTMON-TC-MIB does not define RttMonReactVar, and no other loaded module does. Check the spelling, or load the newer version of CISCO-RTTMON-TC-MIB that added it.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:652:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonApplSupportedRttTypes" references unknown type "RttMonRttType" [type-unknown]
+    hint: RttMonRttType is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:700:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonApplSupportedProtocols" references unknown type "RttMonProtocol" [type-unknown]
+    hint: RttMonProtocol is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1062:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonCtrlAdminRttType" references unknown type "RttMonRttType" [type-unknown]
+    hint: RttMonRttType is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1371:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminProtocol" references unknown type "RttMonProtocol" [type-unknown]
+    hint: RttMonProtocol is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1399:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminTargetAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1472:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminSourceAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1546:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminNameServer" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1727:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminCodecType" references unknown type "RttMonCodecType" [type-unknown]
+    hint: RttMonCodecType is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1804:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminLSPSelector" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:1817:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminLSPReplyMode" references unknown type "RttMonLSPPingReplyMode" [type-unknown]
+    hint: RttMonLSPPingReplyMode is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:2175:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminEmulateSourceAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:2199:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoAdminEmulateTargetAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:3856:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonLatestRttOperAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:4805:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonEchoPathAdminHopAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:5185:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMplsVpnMonCtrlRttType" references unknown type "RttMplsVpnMonRttType" [type-unknown]
+    hint: RttMplsVpnMonRttType is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:5686:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMplsVpnMonTypeLSPReplyMode" references unknown type "RttMonLSPPingReplyMode" [type-unknown]
+    hint: RttMonLSPPingReplyMode is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:6195:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonReactVar" references unknown type "RttMonReactVar" [type-unknown]
+    hint: RttMonReactVar is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:7151:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonStatsCollectAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:8395:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonLpdGrpStatsTargetPE" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:8539:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonLpdGrpStatsLPDFailCause" references unknown type "RttMplsVpnMonLpdFailureSense" [type-unknown]
+    hint: RttMplsVpnMonLpdFailureSense is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:8563:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonLpdGrpStatsGroupStatus" references unknown type "RttMplsVpnMonLpdGrpStatus" [type-unknown]
+    hint: RttMplsVpnMonLpdGrpStatus is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-MIB.my:8812:21: error: CISCO-RTTMON-MIB: unresolved type: "rttMonHistoryCollectionAddress" references unknown type "RttMonTargetAddress" [type-unknown]
+    hint: RttMonTargetAddress is imported FROM CISCO-RTTMON-TC-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/cisco/CISCO-RTTMON-TC-MIB.my:24:1: minor: CISCO-RTTMON-TC-MIB: revision for LAST-UPDATED 201709060000Z is missing [revision-last-updated]
 corpus/fetched/cisco/CISCO-RTTMON-TC-MIB.my:433:9: error: CISCO-RTTMON-TC-MIB: expected SYNTAX [parse-error]
 corpus/fetched/cisco/CISCO-RTTMON-TC-MIB.my:433:20: error: CISCO-RTTMON-TC-MIB: expected 'H' or 'B' suffix for hex/binary string [missing-hex-bin-suffix]
@@ -1264,7 +1295,9 @@ corpus/fetched/moxa/MOXA-EDS528E-MIB:860:5: error: MOXA-EDS528E-MIB: INDEX "port
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1057:5: minor: MOXA-EDS528E-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1057:5: error: MOXA-EDS528E-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1150:5: error: MOXA-EDS528E-MIB: "RspanVlanid" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to rspanVlanid. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1158:5: error: MOXA-EDS528E-MIB: "ReflectPort" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to reflectPort. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1182:5: minor: MOXA-EDS528E-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1182:5: error: MOXA-EDS528E-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDS528E-MIB:1238:5: minor: MOXA-EDS528E-MIB: INDEX "trunkIndex" of "trunkEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -1521,7 +1554,9 @@ corpus/fetched/moxa/MOXA-EDSG512E-MIB:4138:5: error: MOXA-EDSG512E-MIB: INDEX "d
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:4587:5: minor: MOXA-EDSG512E-MIB: INDEX "ptpPortIndex" of "ptpPortEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:4587:5: error: MOXA-EDSG512E-MIB: INDEX "ptpPortIndex" of "ptpPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:5023:5: error: MOXA-EDSG512E-MIB: "TrackingStatusChangedTrap" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to trackingStatusChangedTrap. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:5042:5: error: MOXA-EDSG512E-MIB: "TrackingPortEnableChangedTrap" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to trackingPortEnableChangedTrap. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:5166:5: minor: MOXA-EDSG512E-MIB: INDEX "eventlogIndex" of "eventlogEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:5166:5: error: MOXA-EDSG512E-MIB: INDEX "eventlogIndex" of "eventlogEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG512E-MIB:5260:2: minor: MOXA-EDSG512E-MIB: INDEX "aclRuleIndex" of "accessControlEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -1547,7 +1582,9 @@ corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:895:5: error: MOXA-EDSG512EPoE-MIB: IND
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1092:5: minor: MOXA-EDSG512EPoE-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1092:5: error: MOXA-EDSG512EPoE-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1185:5: error: MOXA-EDSG512EPoE-MIB: "RspanVlanid" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to rspanVlanid. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1193:5: error: MOXA-EDSG512EPoE-MIB: "ReflectPort" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to reflectPort. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1217:5: minor: MOXA-EDSG512EPoE-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1217:5: error: MOXA-EDSG512EPoE-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG512EPoE-MIB:1273:5: minor: MOXA-EDSG512EPoE-MIB: INDEX "trunkIndex" of "trunkEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -1720,7 +1757,9 @@ corpus/fetched/moxa/MOXA-EDSG516E-MIB:4141:5: error: MOXA-EDSG516E-MIB: INDEX "d
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:4590:5: minor: MOXA-EDSG516E-MIB: INDEX "ptpPortIndex" of "ptpPortEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:4590:5: error: MOXA-EDSG516E-MIB: INDEX "ptpPortIndex" of "ptpPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:5026:5: error: MOXA-EDSG516E-MIB: "TrackingStatusChangedTrap" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to trackingStatusChangedTrap. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:5045:5: error: MOXA-EDSG516E-MIB: "TrackingPortEnableChangedTrap" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to trackingPortEnableChangedTrap. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:5169:5: minor: MOXA-EDSG516E-MIB: INDEX "eventlogIndex" of "eventlogEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:5169:5: error: MOXA-EDSG516E-MIB: INDEX "eventlogIndex" of "eventlogEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-EDSG516E-MIB:5263:2: minor: MOXA-EDSG516E-MIB: INDEX "aclRuleIndex" of "accessControlEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -1990,7 +2029,9 @@ corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:955:5: error: MOXA-IKS6728A-8POE-MIB:
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1110:5: minor: MOXA-IKS6728A-8POE-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1110:5: error: MOXA-IKS6728A-8POE-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1203:5: error: MOXA-IKS6728A-8POE-MIB: "RspanVlanid" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to rspanVlanid. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1211:5: error: MOXA-IKS6728A-8POE-MIB: "ReflectPort" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to reflectPort. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1235:5: minor: MOXA-IKS6728A-8POE-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1235:5: error: MOXA-IKS6728A-8POE-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-IKS6728A-8POE-MIB:1291:5: minor: MOXA-IKS6728A-8POE-MIB: INDEX "trunkIndex" of "trunkEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -2096,7 +2137,9 @@ corpus/fetched/moxa/MOXA-IKS6728A-MIB:879:5: error: MOXA-IKS6728A-MIB: INDEX "po
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1076:5: minor: MOXA-IKS6728A-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1076:5: error: MOXA-IKS6728A-MIB: INDEX "setDevIpIndex" of "setDevIpEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1169:5: error: MOXA-IKS6728A-MIB: "RspanVlanid" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to rspanVlanid. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1177:5: error: MOXA-IKS6728A-MIB: "ReflectPort" should start with a lowercase letter [bad-identifier-case]
+    hint: Names of objects and other values start with a lowercase letter; rename it to reflectPort. Names starting with an uppercase letter are for types and modules.
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1200:5: minor: MOXA-IKS6728A-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1200:5: error: MOXA-IKS6728A-MIB: INDEX "trunkSettingIndex" of "trunkSettingEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/moxa/MOXA-IKS6728A-MIB:1256:5: minor: MOXA-IKS6728A-MIB: INDEX "trunkIndex" of "trunkEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -2323,14 +2366,18 @@ corpus/fetched/paloalto/PAN-GLOBAL-TC:17:2: minor: PAN-GLOBAL-TC: revision for L
 corpus/fetched/paloalto/PAN-TRAPS:8:1: minor: PAN-TRAPS: IpAddress used but not imported from SNMPv2-SMI in PAN-TRAPS [basetype-not-imported]
 corpus/fetched/paloalto/PAN-TRAPS:27:5: minor: PAN-TRAPS: revision for LAST-UPDATED 201805070000Z is missing [revision-last-updated]
 corpus/fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: "panGlobalprotectTrap" references unknown object "panHostId" [objects-unresolved]
+    hint: No loaded module defines panHostId. Check the spelling, or load the MIB that defines it (add its folder to the MIB folders).
 corpus/fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: "panGlobalprotectTrap" references unknown object "panSerialNo" [objects-unresolved]
+    hint: No loaded module defines panSerialNo. Check the spelling, or load the MIB that defines it (add its folder to the MIB folders).
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:48:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "enterprises" already imported from "RFC1155-SMI", ignoring import from "SNMPv2-SMI" [import-duplicate]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:68:2: error: SN-MSPS-SCX200-MIB: unresolved import: "VlanIdOrNone" from "Q-BRIDGE-MIB" (symbol_not_exported) [import-not-found]
+    hint: Q-BRIDGE-MIB does not define VlanIdOrNone, and no other loaded module does. Check the spelling, or load the newer version of Q-BRIDGE-MIB that added it.
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:77:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "DisplayString" already imported from "RFC1213-MIB", ignoring import from "SNMPv2-TC" [import-duplicate]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:6932:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrOpenState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:6938:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrClosedState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:15186:7: error: SN-MSPS-SCX200-MIB: INDEX "snMspsSyslogMailReceiverIndex" of "snMspsSyslogMailReceiverEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:16666:16: error: SN-MSPS-SCX200-MIB: unresolved type: "snMspsDot1qStVlanPrimaryVid" references unknown type "VlanIdOrNone" [type-unknown]
+    hint: VlanIdOrNone is imported FROM Q-BRIDGE-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:21083:1: error: SN-MSPS-SCX200-MIB: INDEX "snMspsPtpTCPortIfIndex" of "snMspsPtpTCPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/siemens/ULAF2-MIB:137:1: error: ULAF2-MIB: INDEX "agtPortIndex" of "agtPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/siemens/ULAF2-MIB:498:1: error: ULAF2-MIB: INDEX "deviceSystemPortIndex" of "deviceSystemEntry" has no range restriction [index-integer-no-range]

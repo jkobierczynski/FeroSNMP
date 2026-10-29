@@ -5,7 +5,7 @@ use std::error::Error;
 use std::path::PathBuf;
 
 use clap::Args;
-use mib_core::{LoadError, MibLibrary, MibSet};
+use mib_core::{LoadError, MibLibrary, MibSet, Strictness};
 
 use crate::CliError;
 
@@ -49,9 +49,12 @@ impl MibSources {
         library
     }
 
-    /// Load every module in the chosen folders.
-    pub fn load(&self) -> Result<MibSet, CliError> {
-        self.library(&[]).load().map_err(load_error)
+    /// Load every module in the chosen folders with the given strictness.
+    pub fn load_with(&self, strictness: Strictness) -> Result<MibSet, CliError> {
+        self.library(&[])
+            .with_strictness(strictness)
+            .load()
+            .map_err(load_error)
     }
 }
 

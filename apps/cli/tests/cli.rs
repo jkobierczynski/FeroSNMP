@@ -207,3 +207,56 @@ fn mib_search() {
     assert_eq!(run.code, 1);
     assert_eq!(run.stdout, "");
 }
+
+const HINTS: &str = "crates/mib-core/tests/hints";
+
+/// The fix hints, one fixture module per kind of hint.
+#[test]
+fn lint_hints() {
+    let run = ferosnmp(&["lint", HINTS]);
+    assert_eq!(run.code, 1);
+    // The "not in any MIB folder" hint lists the folders searched.
+    assert!(
+        run.stdout.contains(&format!("(searched: {HINTS})")),
+        "{}",
+        run.stdout
+    );
+    insta::assert_snapshot!("lint_hints", run.stdout);
+
+    let run = ferosnmp(&["lint", HINTS, "--format", "json"]);
+    let json: serde_json::Value = serde_json::from_str(&run.raw_stdout).expect("valid JSON");
+    let hinted = json["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["hint"].is_string())
+        .count();
+    assert!(hinted >= 10, "{}", run.stdout);
+}
+
+#[test]
+fn mib_why() {
+    let run = ferosnmp(&[
+        "mib",
+        "-M",
+        HINTS,
+        "why",
+        "--lint",
+        "HINT-WRONG-IMPORT-MIB::HintLevel",
+    ]);
+    assert_eq!(run.code, 1, "{}", run.stderr);
+    insta::assert_snapshot!("mib_why_wrong_import", run.stdout);
+
+    let run = ferosnmp(&["mib", "-M", HINTS, "why", "HINT-DEFS-MIB::hintLevel"]);
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    assert!(
+        run.stdout
+            .contains("Resolves to HINT-DEFS-MIB::hintLevel: defined in the module itself."),
+        "{}",
+        run.stdout
+    );
+
+    let run = ferosnmp(&["mib", "-M", HINTS, "why", "NO-SUCH-MIB::x"]);
+    assert_eq!(run.code, 2);
+    assert_eq!(run.stderr, "ferosnmp: module NO-SUCH-MIB is not loaded\n");
+}
