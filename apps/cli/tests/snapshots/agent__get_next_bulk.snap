@@ -1,0 +1,20 @@
+---
+source: apps/cli/tests/agent.rs
+expression: "format!(\"{get}--\\n{next}--\\n{bulk}\")"
+---
+FEROSNMP-TEST-MIB::fstString.0 = STRING: "FeroSNMP test agent"
+FEROSNMP-TEST-MIB::fstTemperature.0 = INTEGER: -12.5 degrees Celsius
+SNMPv2-SMI::mib-2.1.5.0 = STRING: "ferosnmp-test"
+FEROSNMP-TEST-MIB::fstName.42 = STRING: "row 42"
+--
+FEROSNMP-TEST-MIB::fstBinary.0 = Hex-STRING: 00 01 7F 80 FF
+FEROSNMP-TEST-MIB::fstName.1 = STRING: "row 1"
+FEROSNMP-TEST-MIB::fstCount.150 = No more variables left in this MIB View (It is past the end of the MIB tree)
+--
+FEROSNMP-TEST-MIB::fstString.0 = STRING: "FeroSNMP test agent"
+FEROSNMP-TEST-MIB::fstName.1 = STRING: "row 1"
+FEROSNMP-TEST-MIB::fstCount.1 = Counter32: 1000
+FEROSNMP-TEST-MIB::fstName.2 = STRING: "row 2"
+FEROSNMP-TEST-MIB::fstCount.2 = Counter32: 2000
+FEROSNMP-TEST-MIB::fstName.3 = STRING: "row 3"
+FEROSNMP-TEST-MIB::fstCount.3 = Counter32: 3000

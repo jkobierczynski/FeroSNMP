@@ -1,0 +1,5 @@
+---
+source: apps/cli/tests/cli.rs
+expression: run.stderr
+---
+ferosnmp: unknown object "noSuchObjectName.0": no loaded MIB defines noSuchObjectName (add MIB folders with -M, or give a numeric OID)

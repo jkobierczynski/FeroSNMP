@@ -5,7 +5,7 @@
 | Path | What it is |
 |------|------------|
 | `crates/mib-core` | Loads MIB libraries and answers "what is this OID/name?". Wraps [mib-rs](https://docs.rs/mib-rs/0.10.0). |
-| `crates/snmp-core` | Async SNMP engine (from milestone M5). |
+| `crates/snmp-core` | Async SNMP engine on tokio: GET, GETNEXT, GETBULK, WALK. See [crates/snmp-core/README.md](crates/snmp-core/README.md). |
 | `crates/trap-rx` | Trap and INFORM receiver (from milestone M9). |
 | `apps/cli` | The `ferosnmp` command-line tool. See [apps/cli/README.md](apps/cli/README.md). |
 | `crates/fero-win32` | Small Win32 helpers shared by the Fero tools: window classes, DPI, fonts, splitters, dialogs. |
@@ -67,6 +67,22 @@ The command-line tool has snapshot tests too (`apps/cli/tests/cli.rs`): the
 output of `ferosnmp lint corpus/ietf` and of the `mib` commands. Accept
 intended changes with `cargo insta test --accept -p ferosnmp-cli`.
 
+### Query tests against net-snmp
+
+`apps/cli/tests/agent.rs` runs `ferosnmp get|next|bulk|walk` against a real
+net-snmp agent that serves fixed values, and compares the output with stored
+snapshots. It needs `snmpd` and `python3`, so it runs on Linux (or WSL):
+
+```sh
+sudo apt install snmpd                     # once (Debian, Ubuntu, WSL)
+crates/snmp-core/tests/agent/run-agent.sh  # starts snmpd on 127.0.0.1:11161
+FEROSNMP_TEST_AGENT=127.0.0.1:11161 cargo test -p ferosnmp-cli --test agent
+crates/snmp-core/tests/agent/run-agent.sh stop
+```
+
+Without `FEROSNMP_TEST_AGENT` these tests are skipped. The engine's own
+tests (`cargo test -p snmp-core`) use a small fake agent and run everywhere.
+
 ## Dependencies and licences
 
 FeroSNMP is licensed GPL-3.0-or-later. `deny.toml` lists the licences a
@@ -101,9 +117,10 @@ Every pull request must pass these checks:
 - **cargo audit**: known security advisories.
 - **Fuzz smoke run**: 60 seconds of fuzzing the MIB loader.
 
-Two more jobs run but are not required: **Build and test (Linux)** (also
-builds the docs) and **Full MIB corpus** (downloads the vendor MIBs, so it
-depends on vendor sites being reachable).
+Three more jobs run but are not required: **Build and test (Linux)** (also
+builds the docs), **Full MIB corpus** (downloads the vendor MIBs, so it
+depends on vendor sites being reachable) and **Query tests (net-snmp)**
+(the golden-file query tests against net-snmp `snmpd`).
 
 ## Releases
 

@@ -3,6 +3,24 @@
 All notable changes to FeroSNMP. Versions follow [Semantic Versioning](https://semver.org/);
 before 1.0, a minor version may change behaviour.
 
+## [Unreleased]
+
+### SNMP queries (command-line tool)
+
+- `ferosnmp get`, `next`, `bulk` and `walk` query an agent over SNMPv1 or
+  SNMPv2c, with community, timeout and retries options.
+- Walks use GETBULK with SNMPv2c and GETNEXT with SNMPv1 (or `--no-bulk`),
+  fall back to GETNEXT when an agent fails on GETBULK, ask for fewer
+  values when a response is too big, and stop safely at the end of the
+  subtree, at `endOfMibView`, or when a broken agent returns OIDs that do
+  not increase.
+- Values are shown with the loaded MIBs: names, enum labels, BITS names,
+  DISPLAY-HINTs (MAC addresses, DateAndTime, decimals) and units. `--raw`
+  shows numeric OIDs, ASN.1 tags and the bytes in hex; `-n` numeric OIDs.
+- `--log` prints every request with its request-id, retries and timing.
+- Values of any type are kept, also ones that are malformed or unknown, so
+  a walk never ends early without saying so.
+
 ## [0.1.0]
 
 The first release: a read-only MIB browser and linter for Windows 10 and 11,
