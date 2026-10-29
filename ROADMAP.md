@@ -20,7 +20,7 @@ item; the issue lists the full scope. This file is the overview.
 | [M6: GUI queries](https://github.com/jkobierczynski/FeroSNMP/issues/16) | Done | v0.2.0 |
 | **Phase 3: SNMPv3, SET and tables** | | |
 | [M7: SNMPv3 (USM)](https://github.com/jkobierczynski/FeroSNMP/issues/17) | Merged; a test on a real vendor device is still open | |
-| [M8: Table view and SET](https://github.com/jkobierczynski/FeroSNMP/issues/18) | Done when v0.3.0 is tagged | v0.3.0 |
+| [M8: Table view and SET](https://github.com/jkobierczynski/FeroSNMP/issues/18) | Done | v0.3.0 |
 | **Phase 4: traps and 1.0** | | |
 | [M9: trap-rx receiver](https://github.com/jkobierczynski/FeroSNMP/issues/19) | Next | |
 | [M10: Trap UI](https://github.com/jkobierczynski/FeroSNMP/issues/20) | Planned | v1.0.0 |
