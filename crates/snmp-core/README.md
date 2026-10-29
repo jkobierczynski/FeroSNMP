@@ -5,6 +5,9 @@ SNMPv2c and SNMPv3 (USM) on tokio, with timeouts, retries, a per-agent concurren
 operation log, and value formatting through the MIBs of `mib-core` (enum
 labels, BITS names, DISPLAY-HINTs, units).
 
+It also decodes received traps and INFORMs for the `trap-rx` crate (see
+"Notifications" below).
+
 ```rust
 let engine = Engine::start(EngineConfig::default());
 let target = Target::parse("192.0.2.1")?.with_community("public");
@@ -68,6 +71,32 @@ a target to SNMPv3. The code:
 `Operation::Discover` only discovers; `Event::Engine` reports the engine an
 operation uses. Errors are `Error::Security` with a `SecurityProblem`.
 
+## Notifications
+
+`src/notify.rs` is the receiving side, for the `trap-rx` crate:
+`NotificationReceiver::handle` takes one datagram and returns the
+`Notification` in it and the reply to send, if any.
+
+- SNMPv1 Trap-PDUs are translated to SNMPv2 form (RFC 3584, 3.1):
+  `sysUpTime.0` and `snmpTrapOID.0` first (`snmpTraps.N` for a generic trap,
+  `enterprise.0.specific` otherwise), then the objects, then
+  `snmpTrapAddress.0`, `snmpTrapCommunity.0` and `snmpTrapEnterprise.0`.
+  The original fields stay in `Notification::v1`.
+- SNMPv2c traps and INFORMs; an INFORM gets a Response with the same
+  request-id and variables (RFC 3416, 4.2.7).
+- SNMPv3 (RFC 3412, RFC 3414): the receiver has its own engine ID (random
+  per start, or fixed). A trap's keys are localized with the sender's engine
+  ID, an INFORM's with the receiver's; discovery gets a
+  `usmStatsUnknownEngineIDs` Report with the receiver's engine ID, boots and
+  time, and an INFORM out of the time window an authenticated
+  `usmStatsNotInTimeWindows` Report. A `TrapUser` can be bound to one
+  sender's engine ID. The localized keys are cached per user and engine.
+- The same value decoder as for responses, so no value cuts a notification
+  short.
+
+`tests/notifications/` holds datagrams recorded from net-snmp's `snmptrap`
+and `snmpinform`, which `src/tests_notify.rs` decodes.
+
 ## Tests
 
 - `cargo test -p snmp-core` runs everywhere: unit tests, and engine tests
@@ -114,7 +143,8 @@ Gaps to fill later:
   reachable through `AsyncSession`: the v3 messages are built in `src/v3.rs`
   next to the v1/v2c codec, and the USM is our own on the RustCrypto crates
   (see "SNMPv3" above).
-- **M9 (traps):** decode notification variable lists with the same value
-  decoder as `codec.rs`, not snmp2's `Varbinds`.
+- **M9 (traps):** done the same way: notifications are decoded with the
+  value decoder of `codec.rs`, not snmp2's `Varbinds` (see "Notifications"
+  above).
 
 [snmp2]: https://docs.rs/snmp2/0.5.2

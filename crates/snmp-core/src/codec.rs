@@ -89,8 +89,19 @@ pub(crate) fn encode_pdu(request_id: i32, request: &Request) -> Result<Vec<u8>, 
         ),
         Request::Set(varbinds) => (SET_REQUEST, varbinds.clone(), 0, 0),
     };
+    // GETBULK puts non-repeaters and max-repetitions where the other PDUs
+    // have error-status and error-index.
+    let mut pdu = integer(i64::from(request_id));
+    pdu.extend(integer(i64::from(a)));
+    pdu.extend(integer(i64::from(b)));
+    pdu.extend(encode_varbinds(&varbinds)?);
+    Ok(tlv(pdu_tag, &pdu))
+}
+
+/// The variable-bindings of a PDU: a SEQUENCE of OID and value pairs.
+pub(crate) fn encode_varbinds(varbinds: &[Varbind]) -> Result<Vec<u8>, Error> {
     let mut list = Vec::new();
-    for Varbind { oid, value } in &varbinds {
+    for Varbind { oid, value } in varbinds {
         check_oid(oid)?;
         if let Value::ObjectIdentifier(value) = value {
             check_oid(value)?;
@@ -99,13 +110,7 @@ pub(crate) fn encode_pdu(request_id: i32, request: &Request) -> Result<Vec<u8>, 
         varbind.extend(tlv(value.tag(), &value.content_octets()));
         list.extend(tlv(SEQUENCE, &varbind));
     }
-    // GETBULK puts non-repeaters and max-repetitions where the other PDUs
-    // have error-status and error-index.
-    let mut pdu = integer(i64::from(request_id));
-    pdu.extend(integer(i64::from(a)));
-    pdu.extend(integer(i64::from(b)));
-    pdu.extend(tlv(SEQUENCE, &list));
-    Ok(tlv(pdu_tag, &pdu))
+    Ok(tlv(SEQUENCE, &list))
 }
 
 /// The whole SNMPv1 or SNMPv2c message for a request.
@@ -163,7 +168,22 @@ pub(crate) fn decode_pdu(reader: &mut AsnReader<'_>) -> Result<(u8, i32, Respons
     let status = u32::try_from(status).map_err(|_| "error-status out of range")?;
     let index = u32::try_from(index).map_err(|_| "error-index out of range")?;
 
-    let list = pdu.read_raw(SEQUENCE).map_err(asn)?;
+    let varbinds = decode_varbinds(&mut pdu)?;
+    Ok((
+        pdu_tag,
+        request_id,
+        Response {
+            status: ErrorStatus::from_code(status),
+            index,
+            varbinds,
+        },
+    ))
+}
+
+/// Read the variable-bindings of a PDU.
+pub(crate) fn decode_varbinds(reader: &mut AsnReader<'_>) -> Result<Vec<Varbind>, String> {
+    let asn = |e: snmp2::Error| e.to_string();
+    let list = reader.read_raw(SEQUENCE).map_err(asn)?;
     let mut list = AsnReader::from_bytes(list);
     let mut varbinds = Vec::new();
     while list.bytes_left() > 0 {
@@ -177,15 +197,7 @@ pub(crate) fn decode_pdu(reader: &mut AsnReader<'_>) -> Result<(u8, i32, Respons
             value: decode_value(value_tag, content),
         });
     }
-    Ok((
-        pdu_tag,
-        request_id,
-        Response {
-            status: ErrorStatus::from_code(status),
-            index,
-            varbinds,
-        },
-    ))
+    Ok(varbinds)
 }
 
 pub(crate) fn read_integer(reader: &mut AsnReader<'_>) -> Result<i64, String> {
@@ -223,7 +235,7 @@ fn decode_unsigned(content: &[u8], max_bytes: usize) -> Option<u64> {
     )
 }
 
-fn decode_oid(content: &[u8]) -> Result<Oid, String> {
+pub(crate) fn decode_oid(content: &[u8]) -> Result<Oid, String> {
     let mut arcs = Vec::new();
     let mut value: u64 = 0;
     for (i, &byte) in content.iter().enumerate() {
@@ -258,7 +270,7 @@ fn decode_oid(content: &[u8]) -> Result<Oid, String> {
 
 /// A value from its tag and content. Never fails: anything that does not
 /// fit its type is kept as [`Value::Other`] with its bytes.
-fn decode_value(value_tag: u8, content: &[u8]) -> Value {
+pub(crate) fn decode_value(value_tag: u8, content: &[u8]) -> Value {
     let other = || Value::Other {
         tag: value_tag,
         data: content.to_vec(),
