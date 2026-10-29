@@ -1,0 +1,78 @@
+FEROSNMP-TRAP-TEST-MIB DEFINITIONS ::= BEGIN
+
+-- Notifications for the FeroSNMP trap receiver tests
+-- (crates/trap-rx/tests and apps/cli/tests/traps.rs). They live under the
+-- net-snmp "playpen" arc (1.3.6.1.4.1.8072.9999), next to the objects of
+-- FEROSNMP-TEST-MIB.
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE, Integer32, Counter64,
+    IpAddress, enterprises
+        FROM SNMPv2-SMI
+    DisplayString
+        FROM SNMPv2-TC;
+
+ferosnmpTrapTestMIB MODULE-IDENTITY
+    LAST-UPDATED "202610290000Z"
+    ORGANIZATION "FeroSNMP"
+    CONTACT-INFO "https://github.com/jkobierczynski/ferosnmp"
+    DESCRIPTION  "Test notifications for the FeroSNMP trap receiver."
+    REVISION     "202610290000Z"
+    DESCRIPTION  "First version."
+    ::= { fttPlaypen 2 }
+
+fttNetSnmp  OBJECT IDENTIFIER ::= { enterprises 8072 }
+fttPlaypen  OBJECT IDENTIFIER ::= { fttNetSnmp 9999 }
+
+fttNotifications OBJECT IDENTIFIER ::= { ferosnmpTrapTestMIB 0 }
+fttObjects       OBJECT IDENTIFIER ::= { ferosnmpTrapTestMIB 1 }
+
+fttPortName OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION "The name of the port the notification is about."
+    ::= { fttObjects 1 }
+
+fttPortState OBJECT-TYPE
+    SYNTAX      INTEGER { up(1), down(2), testing(3) }
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION "The new state of the port."
+    ::= { fttObjects 2 }
+
+fttTemperature OBJECT-TYPE
+    SYNTAX      Integer32
+    UNITS       "degrees Celsius"
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION "A temperature."
+    ::= { fttObjects 3 }
+
+fttOctets OBJECT-TYPE
+    SYNTAX      Counter64
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION "A large counter."
+    ::= { fttObjects 4 }
+
+fttPeer OBJECT-TYPE
+    SYNTAX      IpAddress
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION "An address."
+    ::= { fttObjects 5 }
+
+fttPortChange NOTIFICATION-TYPE
+    OBJECTS     { fttPortName, fttPortState }
+    STATUS      current
+    DESCRIPTION "A port changed state."
+    ::= { fttNotifications 1 }
+
+fttOverheat NOTIFICATION-TYPE
+    OBJECTS     { fttTemperature }
+    STATUS      current
+    DESCRIPTION "Too hot."
+    ::= { fttNotifications 2 }
+
+END

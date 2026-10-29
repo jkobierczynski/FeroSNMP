@@ -344,6 +344,7 @@ dependencies = [
  "serde_json",
  "snmp-core",
  "tokio",
+ "trap-rx",
 ]
 
 [[package]]
@@ -983,6 +984,13 @@ dependencies = [
 [[package]]
 name = "trap-rx"
 version = "0.3.0"
+dependencies = [
+ "insta",
+ "mib-core",
+ "serde_json",
+ "snmp-core",
+ "tokio",
+]
 
 [[package]]
 name = "typenum"
