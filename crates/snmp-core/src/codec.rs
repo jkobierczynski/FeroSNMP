@@ -12,11 +12,12 @@ use crate::session::{Request, Response};
 use crate::target::Version;
 use crate::value::{Value, Varbind, oid_octets, signed_octets, tag};
 
-const SEQUENCE: u8 = 0x30;
+pub(crate) const SEQUENCE: u8 = 0x30;
 const GET_REQUEST: u8 = 0xa0;
 const GET_NEXT_REQUEST: u8 = 0xa1;
-const RESPONSE: u8 = 0xa2;
+pub(crate) const RESPONSE: u8 = 0xa2;
 const GET_BULK_REQUEST: u8 = 0xa5;
+pub(crate) const REPORT: u8 = 0xa8;
 
 /// Tag, length and content.
 pub(crate) fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
@@ -61,13 +62,8 @@ pub(crate) fn check_oid(oid: &Oid) -> Result<(), Error> {
     }
 }
 
-/// The whole message for a request.
-pub(crate) fn encode_request(
-    version: Version,
-    community: &[u8],
-    request_id: i32,
-    request: &Request,
-) -> Result<Vec<u8>, Error> {
+/// The request PDU (RFC 3416, section 3), the same in every version.
+pub(crate) fn encode_pdu(request_id: i32, request: &Request) -> Result<Vec<u8>, Error> {
     let (pdu_tag, oids, a, b) = match request {
         Request::Get(oids) => (GET_REQUEST, oids.as_slice(), 0, 0),
         Request::GetNext(oid) => (GET_NEXT_REQUEST, std::slice::from_ref(oid), 0, 0),
@@ -95,17 +91,28 @@ pub(crate) fn encode_request(
     pdu.extend(integer(i64::from(a)));
     pdu.extend(integer(i64::from(b)));
     pdu.extend(tlv(SEQUENCE, &list));
+    Ok(tlv(pdu_tag, &pdu))
+}
 
+/// The whole SNMPv1 or SNMPv2c message for a request.
+pub(crate) fn encode_request(
+    version: Version,
+    community: &[u8],
+    request_id: i32,
+    request: &Request,
+) -> Result<Vec<u8>, Error> {
     let mut message = integer(match version {
         Version::V1 => 0,
         Version::V2c => 1,
+        Version::V3 => unreachable!("SNMPv3 messages are built in v3.rs"),
     });
     message.extend(tlv(tag::OCTET_STRING, community));
-    message.extend(tlv(pdu_tag, &pdu));
+    message.extend(encode_pdu(request_id, request)?);
     Ok(tlv(SEQUENCE, &message))
 }
 
-/// Decode a Response message into its request-id and contents.
+/// Decode an SNMPv1 or SNMPv2c Response message into its request-id and
+/// contents.
 pub(crate) fn decode_response(bytes: &[u8]) -> Result<(i32, Response), String> {
     let asn = |e: snmp2::Error| e.to_string();
     let message = AsnReader::from_bytes(bytes)
@@ -119,11 +126,21 @@ pub(crate) fn decode_response(bytes: &[u8]) -> Result<(i32, Response), String> {
         ));
     }
     message.read_raw(tag::OCTET_STRING).map_err(asn)?;
-    let pdu_tag = message.peek_byte().map_err(asn)?;
+    let (pdu_tag, request_id, response) = decode_pdu(&mut message)?;
     if pdu_tag != RESPONSE {
         return Err(format!("expected a Response PDU, got tag 0x{pdu_tag:02x}"));
     }
-    let pdu = message.read_raw(RESPONSE).map_err(asn)?;
+    Ok((request_id, response))
+}
+
+/// Read a Response or Report PDU: its tag, request-id and contents.
+pub(crate) fn decode_pdu(reader: &mut AsnReader<'_>) -> Result<(u8, i32, Response), String> {
+    let asn = |e: snmp2::Error| e.to_string();
+    let pdu_tag = reader.peek_byte().map_err(asn)?;
+    if pdu_tag != RESPONSE && pdu_tag != REPORT {
+        return Err(format!("expected a Response PDU, got tag 0x{pdu_tag:02x}"));
+    }
+    let pdu = reader.read_raw(pdu_tag).map_err(asn)?;
     let mut pdu = AsnReader::from_bytes(pdu);
     let request_id = read_integer(&mut pdu)?;
     let status = read_integer(&mut pdu)?;
@@ -147,6 +164,7 @@ pub(crate) fn decode_response(bytes: &[u8]) -> Result<(i32, Response), String> {
         });
     }
     Ok((
+        pdu_tag,
         request_id,
         Response {
             status: ErrorStatus::from_code(status),
@@ -156,7 +174,7 @@ pub(crate) fn decode_response(bytes: &[u8]) -> Result<(i32, Response), String> {
     ))
 }
 
-fn read_integer(reader: &mut AsnReader<'_>) -> Result<i64, String> {
+pub(crate) fn read_integer(reader: &mut AsnReader<'_>) -> Result<i64, String> {
     let content = reader.read_raw(tag::INTEGER).map_err(|e| e.to_string())?;
     decode_signed(content).ok_or_else(|| "INTEGER of 0 or more than 8 bytes".to_string())
 }

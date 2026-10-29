@@ -3,7 +3,9 @@
 use std::fmt;
 use std::time::Duration;
 
-/// The SNMP versions the engine speaks. SNMPv3 follows in a later milestone.
+use crate::usm::Usm;
+
+/// The SNMP versions the engine speaks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Version {
     /// SNMPv1 (RFC 1157): no GETBULK, no Counter64, errors instead of
@@ -11,6 +13,8 @@ pub enum Version {
     V1,
     /// SNMPv2c (RFC 1901, RFC 3416).
     V2c,
+    /// SNMPv3 with the User-based Security Model (RFC 3412, RFC 3414).
+    V3,
 }
 
 impl fmt::Display for Version {
@@ -18,6 +22,7 @@ impl fmt::Display for Version {
         f.write_str(match self {
             Version::V1 => "SNMPv1",
             Version::V2c => "SNMPv2c",
+            Version::V3 => "SNMPv3",
         })
     }
 }
@@ -43,8 +48,10 @@ pub struct Target {
     pub port: u16,
     /// Protocol version.
     pub version: Version,
-    /// Community string.
+    /// Community string, for SNMPv1 and SNMPv2c.
     pub community: Vec<u8>,
+    /// User and secrets, for SNMPv3.
+    pub usm: Usm,
     /// How long to wait for each response.
     pub timeout: Duration,
     /// How many times to send a request again after a timeout.
@@ -60,6 +67,7 @@ impl Target {
             port,
             version: Version::V2c,
             community: b"public".to_vec(),
+            usm: Usm::default(),
             timeout: Duration::from_secs(2),
             retries: 2,
         }
@@ -117,6 +125,13 @@ impl Target {
         self
     }
 
+    /// Use SNMPv3 with this user.
+    pub fn with_usm(mut self, usm: Usm) -> Target {
+        self.version = Version::V3;
+        self.usm = usm;
+        self
+    }
+
     /// Set how long to wait for each response.
     pub fn with_timeout(mut self, timeout: Duration) -> Target {
         self.timeout = timeout;
@@ -142,12 +157,14 @@ impl fmt::Display for Target {
 }
 
 impl fmt::Debug for Target {
-    // The community is a password, so it is left out.
+    // The community is a password, so it is left out (and so are the
+    // passwords in `usm`).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Target")
             .field("host", &self.host)
             .field("port", &self.port)
             .field("version", &self.version)
+            .field("usm", &self.usm)
             .field("timeout", &self.timeout)
             .field("retries", &self.retries)
             .finish_non_exhaustive()

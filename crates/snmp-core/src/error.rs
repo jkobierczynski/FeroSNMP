@@ -5,6 +5,8 @@ use std::time::Duration;
 
 use mib_core::Oid;
 
+use crate::usm::SecurityLevel;
+
 /// Why an SNMP operation failed.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
@@ -29,7 +31,7 @@ pub enum Error {
     /// No response arrived, not even after retrying.
     #[error(
         "no response from {target} after {attempts} attempt{s} of {timeout} each \
-         (check the address, the port, the community and any firewall)",
+         (check the address, the port, the community or SNMPv3 user, and any firewall)",
         s = if *attempts == 1 { "" } else { "s" },
         timeout = SecondsText(*timeout)
     )]
@@ -86,9 +88,28 @@ pub enum Error {
         reason: String,
     },
 
+    /// An SNMPv3 security problem: the agent refused the request with a
+    /// Report, or its answer did not pass our checks, or the settings are
+    /// unusable.
+    #[error("{target}: {}", problem.explain(user, *level))]
+    Security {
+        /// The agent, as `host:port`.
+        target: String,
+        /// The SNMPv3 user name.
+        user: String,
+        /// The security level asked for.
+        level: SecurityLevel,
+        /// What went wrong.
+        problem: SecurityProblem,
+    },
+
     /// GETBULK was requested with SNMPv1, which does not have it.
     #[error("GETBULK needs SNMPv2c; SNMPv1 only has GET and GETNEXT")]
     BulkNeedsV2,
+
+    /// Engine discovery was requested with SNMPv1 or SNMPv2c.
+    #[error("engine discovery needs SNMPv3; SNMPv1 and SNMPv2c have no engine ID")]
+    DiscoveryNeedsV3,
 
     /// The operation was cancelled before it finished.
     #[error("the operation was cancelled")]
@@ -97,6 +118,159 @@ pub enum Error {
     /// The engine has shut down and accepts no more operations.
     #[error("the SNMP engine has stopped")]
     EngineStopped,
+}
+
+/// What went wrong with SNMPv3 security. Most of these come from the
+/// counter in a Report PDU (RFC 3414, section 3.2; RFC 3412, section 7.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SecurityProblem {
+    /// `usmStatsUnsupportedSecLevels`: the user exists, but not at this
+    /// security level.
+    UnsupportedSecurityLevel,
+    /// `usmStatsNotInTimeWindows`, even after synchronizing the clock with
+    /// the agent.
+    NotInTimeWindow,
+    /// `usmStatsUnknownUserNames`: the agent does not know the user.
+    UnknownUser,
+    /// `usmStatsUnknownEngineIDs`, even after discovering the engine ID
+    /// again.
+    UnknownEngineId,
+    /// `usmStatsWrongDigests`: the authentication code did not match, so
+    /// the authentication password or protocol differs.
+    WrongDigest,
+    /// `usmStatsDecryptionErrors`: the agent could not decrypt the request,
+    /// so the privacy password or protocol differs.
+    DecryptionError,
+    /// The agent ignored an encrypted request but answered the same user
+    /// without privacy: the privacy password or protocol differs.
+    PrivacyMismatch,
+    /// `snmpUnknownContexts`: no such context name.
+    UnknownContext,
+    /// `snmpUnavailableContexts`.
+    UnavailableContext,
+    /// `snmpUnknownSecurityModels`.
+    UnknownSecurityModel,
+    /// `snmpInvalidMsgs`.
+    InvalidMessage,
+    /// `snmpUnknownPDUHandlers`.
+    UnknownPduHandler,
+    /// A Report with another (or no) counter.
+    OtherReport(Option<Oid>),
+    /// The response had no authentication code, although one was asked for.
+    ResponseNotAuthenticated,
+    /// The response's authentication code was wrong.
+    ResponseWrongDigest,
+    /// The response could not be decrypted.
+    ResponseDecryption(String),
+    /// Discovery returned no engine ID.
+    NoEngineId,
+    /// The settings cannot be used, such as a password that is too short.
+    InvalidSettings(String),
+}
+
+impl SecurityProblem {
+    /// The counter name from the Report, such as `usmStatsWrongDigests`.
+    pub fn counter(&self) -> Option<&'static str> {
+        Some(match self {
+            SecurityProblem::UnsupportedSecurityLevel => "usmStatsUnsupportedSecLevels",
+            SecurityProblem::NotInTimeWindow => "usmStatsNotInTimeWindows",
+            SecurityProblem::UnknownUser => "usmStatsUnknownUserNames",
+            SecurityProblem::UnknownEngineId => "usmStatsUnknownEngineIDs",
+            SecurityProblem::WrongDigest => "usmStatsWrongDigests",
+            SecurityProblem::DecryptionError => "usmStatsDecryptionErrors",
+            SecurityProblem::UnknownContext => "snmpUnknownContexts",
+            SecurityProblem::UnavailableContext => "snmpUnavailableContexts",
+            SecurityProblem::UnknownSecurityModel => "snmpUnknownSecurityModels",
+            SecurityProblem::InvalidMessage => "snmpInvalidMsgs",
+            SecurityProblem::UnknownPduHandler => "snmpUnknownPDUHandlers",
+            _ => return None,
+        })
+    }
+
+    /// One or two sentences: what happened, and what to change.
+    pub fn explain(&self, user: &str, level: SecurityLevel) -> String {
+        let counter = self
+            .counter()
+            .map(|name| format!(" ({name})"))
+            .unwrap_or_default();
+        match self {
+            SecurityProblem::UnsupportedSecurityLevel => format!(
+                "the agent knows user \"{user}\", but not at security level {level}{counter}. \
+                 Pick the level the user was set up with: authPriv needs a privacy \
+                 password on the agent, authNoPriv needs an authentication password"
+            ),
+            SecurityProblem::NotInTimeWindow => format!(
+                "the agent rejected the request as outside its time window{counter}, even \
+                 after synchronizing with its clock. Its engine boots or time may be \
+                 broken, or several devices share one engine ID"
+            ),
+            SecurityProblem::UnknownUser => format!(
+                "the agent does not know SNMPv3 user \"{user}\"{counter}. Check the user \
+                 name (it is case-sensitive); on net-snmp, users are added with createUser"
+            ),
+            SecurityProblem::UnknownEngineId => format!(
+                "the agent did not accept its own engine ID{counter}, even after \
+                 discovering it again"
+            ),
+            SecurityProblem::WrongDigest => format!(
+                "authentication failed for user \"{user}\"{counter}: the authentication \
+                 password or protocol differs from the agent's. Check both; SHA means \
+                 SHA-1, which is not the same as SHA-256"
+            ),
+            SecurityProblem::DecryptionError => format!(
+                "the agent could not decrypt the request{counter}: the privacy password or \
+                 protocol differs from the agent's. For AES-192 and AES-256, also try the \
+                 Cisco key extension (AES-192C, AES-256C), or the other way round"
+            ),
+            SecurityProblem::PrivacyMismatch => format!(
+                "the agent did not answer the encrypted request, but does answer user \
+                 \"{user}\" without privacy: the privacy password or protocol differs from \
+                 the agent's (agents such as net-snmp drop what they cannot decrypt instead \
+                 of reporting it). For AES-192 and AES-256, also try the Cisco key \
+                 extension (AES-192C, AES-256C), or the other way round"
+            ),
+            SecurityProblem::UnknownContext => format!(
+                "the agent does not know the context name{counter}; leave it empty unless \
+                 the device's documentation names one"
+            ),
+            SecurityProblem::UnavailableContext => {
+                format!("the context is not available on the agent{counter}")
+            }
+            SecurityProblem::UnknownSecurityModel => {
+                format!("the agent does not support the User-based Security Model{counter}")
+            }
+            SecurityProblem::InvalidMessage => format!(
+                "the agent says the message was invalid{counter}; this is likely a FeroSNMP \
+                 bug, please report it"
+            ),
+            SecurityProblem::UnknownPduHandler => {
+                format!("the agent cannot handle this kind of request{counter}")
+            }
+            SecurityProblem::OtherReport(Some(oid)) => {
+                format!("the agent refused the request with a Report for {oid}")
+            }
+            SecurityProblem::OtherReport(None) => {
+                "the agent refused the request with an empty Report".to_string()
+            }
+            SecurityProblem::ResponseNotAuthenticated => format!(
+                "the response was not authenticated although {level} was asked for, so it \
+                 was not accepted"
+            ),
+            SecurityProblem::ResponseWrongDigest => format!(
+                "the response's authentication code is wrong: the agent's key for user \
+                 \"{user}\" differs from ours (check the authentication password and \
+                 protocol), or the response was changed on the way"
+            ),
+            SecurityProblem::ResponseDecryption(reason) => format!(
+                "cannot decrypt the response: {reason}. The privacy password or protocol \
+                 probably differs from the agent's"
+            ),
+            SecurityProblem::NoEngineId => "the agent did not report an engine ID when asked; \
+                it may not support SNMPv3"
+                .to_string(),
+            SecurityProblem::InvalidSettings(reason) => reason.clone(),
+        }
+    }
 }
 
 /// Formats a duration as "1 s" or "0.5 s".
@@ -126,6 +300,24 @@ pub enum ErrorStatus {
     GenErr,
     /// 6 and up: SNMPv2 SET errors and `authorizationError`, by number.
     Other(u32),
+}
+
+impl Error {
+    /// Advice that goes beyond the message, for a few errors whose cause
+    /// is often not where one looks first.
+    pub fn hint(&self) -> Option<&'static str> {
+        match self {
+            Error::Agent {
+                status: ErrorStatus::Other(16),
+                ..
+            } => Some(
+                "authorizationError: the agent's access rules do not allow this user, \
+                 community or security level to read this. On net-snmp, `rouser NAME priv` \
+                 needs authPriv and `rouser NAME auth` needs authNoPriv or more",
+            ),
+            _ => None,
+        }
+    }
 }
 
 impl ErrorStatus {

@@ -9,7 +9,9 @@
 //! - `ferosnmp lint <files|dirs>...`: check MIB files and report problems
 //!   with file, line and column.
 //! - `ferosnmp get|next|bulk <agent> <objects>...` and
-//!   `ferosnmp walk <agent> [<root>]`: ask an SNMP agent (v1 or v2c).
+//!   `ferosnmp walk <agent> [<root>]`: ask an SNMP agent (v1, v2c or v3).
+//! - `ferosnmp discover <agent>`: an SNMPv3 agent's engine ID, boots and
+//!   time.
 //!
 //! Exit codes, so scripts and CI jobs can rely on them:
 //!
@@ -149,6 +151,17 @@ enum Command {
         /// Use GETNEXT also with SNMPv2c, for agents with a broken GETBULK.
         #[arg(long)]
         no_bulk: bool,
+    },
+
+    /// Show an SNMPv3 agent's engine ID, boots and time.
+    ///
+    /// Needs no user; with -u and passwords, the credentials are not
+    /// checked yet (use `get` for that).
+    ///
+    /// Example: ferosnmp discover 192.0.2.1
+    Discover {
+        #[command(flatten)]
+        query: QueryArgs,
     },
 }
 
@@ -323,6 +336,7 @@ fn run(command: Command, out: &mut impl Write) -> Result<Status, CliError> {
             },
             out,
         ),
+        Command::Discover { query } => query::run(&query, Query::Discover, out),
     }
 }
 

@@ -23,7 +23,6 @@ publish = false
 [workspace.dependencies]
 mib-core = { path = "crates/mib-core" }
 snmp-core = { path = "crates/snmp-core" }
-trap-rx = { path = "crates/trap-rx" }
 fero-win32 = { path = "crates/fero-win32" }
 
 # mib-rs is pre-1.0 and may break its API in any minor release, so it is pinned
@@ -37,8 +36,16 @@ insta = "1"
 # the crypto backend decision for M7).
 snmp2 = { version = "0.5.2", default-features = false }
 tokio = { version = "1.47", features = ["macros", "net", "rt", "sync", "time"] }
+# SNMPv3 crypto (snmp-core): pure Rust, from RustCrypto, so no OpenSSL to
+# build or ship on Windows.
+aes = "0.9"
+des = "0.9"
+hmac = "0.13"
+md-5 = "0.11"
+sha1 = "0.11"
+sha2 = "0.11"
 # Used only by the CLI: argument parsing and JSON output.
-clap = { version = "4.6", features = ["derive"] }
+clap = { version = "4.6", features = ["derive", "env"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 # Used only by the GUI: Win32 bindings, the application manifest, and the
 # settings file.
