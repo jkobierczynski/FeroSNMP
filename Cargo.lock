@@ -764,6 +764,7 @@ dependencies = [
  "aes",
  "des",
  "hmac",
+ "insta",
  "md-5",
  "mib-core",
  "sha1",

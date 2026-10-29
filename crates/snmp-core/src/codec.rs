@@ -16,6 +16,7 @@ pub(crate) const SEQUENCE: u8 = 0x30;
 const GET_REQUEST: u8 = 0xa0;
 const GET_NEXT_REQUEST: u8 = 0xa1;
 pub(crate) const RESPONSE: u8 = 0xa2;
+const SET_REQUEST: u8 = 0xa3;
 const GET_BULK_REQUEST: u8 = 0xa5;
 pub(crate) const REPORT: u8 = 0xa8;
 
@@ -64,25 +65,38 @@ pub(crate) fn check_oid(oid: &Oid) -> Result<(), Error> {
 
 /// The request PDU (RFC 3416, section 3), the same in every version.
 pub(crate) fn encode_pdu(request_id: i32, request: &Request) -> Result<Vec<u8>, Error> {
-    let (pdu_tag, oids, a, b) = match request {
-        Request::Get(oids) => (GET_REQUEST, oids.as_slice(), 0, 0),
-        Request::GetNext(oid) => (GET_NEXT_REQUEST, std::slice::from_ref(oid), 0, 0),
+    // Requests that only read send NULL as the value of each variable.
+    let null = |oids: &[Oid]| -> Vec<Varbind> {
+        oids.iter()
+            .map(|oid| Varbind {
+                oid: oid.clone(),
+                value: Value::Null,
+            })
+            .collect()
+    };
+    let (pdu_tag, varbinds, a, b) = match request {
+        Request::Get(oids) => (GET_REQUEST, null(oids), 0, 0),
+        Request::GetNext(oid) => (GET_NEXT_REQUEST, null(std::slice::from_ref(oid)), 0, 0),
         Request::GetBulk {
             oids,
             non_repeaters,
             max_repetitions,
         } => (
             GET_BULK_REQUEST,
-            oids.as_slice(),
+            null(oids),
             *non_repeaters,
             *max_repetitions,
         ),
+        Request::Set(varbinds) => (SET_REQUEST, varbinds.clone(), 0, 0),
     };
     let mut list = Vec::new();
-    for oid in oids {
+    for Varbind { oid, value } in &varbinds {
         check_oid(oid)?;
+        if let Value::ObjectIdentifier(value) = value {
+            check_oid(value)?;
+        }
         let mut varbind = tlv(tag::OBJECT_IDENTIFIER, &oid_octets(oid.arcs()));
-        varbind.extend_from_slice(&[tag::NULL, 0]);
+        varbind.extend(tlv(value.tag(), &value.content_octets()));
         list.extend(tlv(SEQUENCE, &varbind));
     }
     // GETBULK puts non-repeaters and max-repetitions where the other PDUs
@@ -315,6 +329,41 @@ mod tests {
         // snmp2 reads the two fields under their GET names.
         assert_eq!((parsed.error_status, parsed.error_index), (1, 25));
         assert_eq!(parsed.varbinds.count(), 2);
+    }
+
+    #[test]
+    fn encodes_a_set_request() {
+        let request = Request::Set(vec![
+            Varbind {
+                oid: oid("1.3.6.1.2.1.1.4.0"),
+                value: Value::OctetString(b"me".to_vec()),
+            },
+            Varbind {
+                oid: oid("1.3.6.1.4.1.1.1.0"),
+                value: Value::IpAddress([192, 0, 2, 1]),
+            },
+        ]);
+        let bytes = encode_request(Version::V2c, b"private", 9, &request).unwrap();
+        let parsed = snmp2::Pdu::from_bytes(&bytes).unwrap();
+        assert_eq!(parsed.message_type, snmp2::MessageType::SetRequest);
+        assert_eq!(parsed.req_id, 9);
+        let varbinds: Vec<String> = parsed
+            .varbinds
+            .map(|(o, v)| format!("{} {v:?}", o.to_id_string()))
+            .collect();
+        assert_eq!(
+            varbinds,
+            [
+                "1.3.6.1.2.1.1.4.0 OCTET STRING: me",
+                "1.3.6.1.4.1.1.1.0 IP ADDRESS: 192.0.2.1"
+            ]
+        );
+        // The varbind of the first value: OID, then 04 02 "me".
+        let first = [
+            0x30, 0x0e, 0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x04, 0x00, 0x04, 0x02,
+            b'm', b'e',
+        ];
+        assert!(bytes.windows(first.len()).any(|w| w == first));
     }
 
     #[test]

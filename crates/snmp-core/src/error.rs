@@ -306,17 +306,46 @@ impl Error {
     /// Advice that goes beyond the message, for a few errors whose cause
     /// is often not where one looks first.
     pub fn hint(&self) -> Option<&'static str> {
-        match self {
-            Error::Agent {
-                status: ErrorStatus::Other(16),
-                ..
-            } => Some(
+        let Error::Agent { status, .. } = self else {
+            return None;
+        };
+        Some(match status.code() {
+            16 => {
                 "authorizationError: the agent's access rules do not allow this user, \
                  community or security level to read this. On net-snmp, `rouser NAME priv` \
-                 needs authPriv and `rouser NAME auth` needs authNoPriv or more",
-            ),
-            _ => None,
-        }
+                 needs authPriv and `rouser NAME auth` needs authNoPriv or more"
+            }
+            4 | 6 | 17 => {
+                "the agent does not let this community or user write here. A read-only \
+                 community cannot SET (net-snmp needs `rwcommunity` or `rwuser`, not \
+                 `rocommunity`), and many agents keep objects read-only that the MIB \
+                 calls read-write"
+            }
+            3 | 10 => {
+                "the agent does not accept this value, although its type is right: it may \
+                 support fewer values or a smaller range than the MIB allows"
+            }
+            7 => {
+                "the agent expects another type for this object; check that the loaded MIB \
+                 is the one the agent implements, or give the type"
+            }
+            8 => "the value is longer or shorter than the agent accepts for this object",
+            11 => {
+                "this instance does not exist and cannot be created: check the index, or \
+                 create the row through its RowStatus column (createAndGo or createAndWait)"
+            }
+            12 => {
+                "the value does not fit the agent's current state, for example a row that \
+                 must be set to notInService before it can be changed"
+            }
+            18 => "the agent cannot create an instance with this index",
+            13 => "the agent ran out of a resource it needs to make this change",
+            14 | 15 => {
+                "the agent failed while making the change; with undoFailed, some of the \
+                 values may have been set and others not"
+            }
+            _ => return None,
+        })
     }
 }
 

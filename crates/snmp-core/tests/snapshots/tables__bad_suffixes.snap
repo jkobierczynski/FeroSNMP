@@ -1,0 +1,9 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: view.text(&mut formatter)
+---
+fstPortSlot          fstPortAddress  fstPortName  fstPortMac  fstPortSpeed  fstPortStatus
+?.1.192.0.2.1.9.101                                           1 Mbit/s
+?.1.192.0.2.300.0                                             1 Mbit/s
+note: row ?.1.192.0.2.1.9.101: the length says 9, but only 1 arc follow (index fstPortName, at arc 6 of the instance)
+note: row ?.1.192.0.2.300.0: a byte of a string must be 0..255 (index fstPortAddress, at arc 2 of the instance)

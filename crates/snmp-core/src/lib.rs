@@ -55,8 +55,10 @@ mod display_hint;
 mod engine;
 mod error;
 mod format;
+mod input;
 mod object;
 mod session;
+mod table;
 mod target;
 mod usm;
 mod v3;
@@ -67,14 +69,16 @@ mod tests;
 #[cfg(test)]
 mod tests_v3;
 
-pub use display_hint::{format_integer, format_octets};
+pub use display_hint::{format_integer, format_octets, parse_integer, parse_octets};
 pub use engine::{
     DEFAULT_MAX_REPETITIONS, Engine, EngineConfig, Event, Operation, Running, Summary,
 };
 pub use error::{Error, ErrorStatus, SecurityProblem};
 pub use format::{Formatter, ValueText, raw_line};
+pub use input::{InputError, ValueInput, ValueType};
 pub use object::{ObjectError, resolve_object};
 pub use session::{EngineInfo, LogEntry, uptime_text};
+pub use table::{TableRow, TableView, index_text};
 pub use target::{DEFAULT_PORT, ParseTargetError, Target, Version};
 pub use usm::{AuthProtocol, PrivProtocol, SecurityLevel, Usm, hex, parse_hex};
 pub use value::{Value, Varbind, tag};

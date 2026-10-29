@@ -48,6 +48,11 @@ pub enum Operation {
         /// Use GETBULK when the version allows it.
         bulk: bool,
     },
+    /// SET: write these values, all in one request. The agent sets all of
+    /// them or none; its response (the values as set) arrives as
+    /// [`Event::Varbinds`]. Build the values with [`ValueInput`](crate::ValueInput)
+    /// to have them checked against the MIB first.
+    Set(Vec<Varbind>),
     /// SNMPv3 only: discover the agent's engine ID, boots and time, which
     /// arrive as [`Event::Engine`]. Nothing else is asked.
     Discover,
@@ -283,7 +288,7 @@ impl<'a> Run<'a> {
 
     /// Like [`request`](Self::request), but an error status is an error.
     async fn request_ok(&mut self, request: Request) -> Result<Response, Error> {
-        let requested = request.oids().to_vec();
+        let requested = request.oids();
         let response = self.request(request).await?;
         if response.status != ErrorStatus::NoError {
             return Err(response.error(self.session.target(), &requested));
@@ -333,6 +338,10 @@ impl<'a> Run<'a> {
                 max_repetitions,
                 bulk,
             } => self.walk(root, *max_repetitions, *bulk).await,
+            Operation::Set(varbinds) => {
+                let response = self.request_ok(Request::Set(varbinds.clone())).await?;
+                self.results(response.varbinds).await
+            }
             Operation::Discover => self.session.discover().await,
         }
     }

@@ -1,0 +1,10 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"RFC1213-MIB::ipNetToMediaTable\", &[\"ipNetToMediaTable\"])"
+---
+RFC1213-MIB::ipNetToMediaTable INDEX { ipNetToMediaIfIndex [Integer], ipNetToMediaNetAddress [IpAddress] }
+ipNetToMediaIfIndex  ipNetToMediaNetAddress  ipNetToMediaPhysAddress  ipNetToMediaType
+2                    192.0.2.1               02:fc:00:00:00:05        dynamic(3)
+2                    192.0.2.254             00:1b:21:0a:ff:09        static(4)
+4                    10.0.0.1                52:54:00:12:34:56        dynamic(3)
+4                    10.0.0.17               52:54:00:ab:cd:ef        invalid(2)

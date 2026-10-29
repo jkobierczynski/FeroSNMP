@@ -1,0 +1,8 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"fstPolicyTable\", &[\"fstPolicyTable\"])"
+---
+FEROSNMP-TEST-MIB::fstPolicyTable INDEX { fstPolicyFamily [Integer], IMPLIED fstPolicyId [ImpliedObjectIdentifier] }
+fstPolicyFamily  fstPolicyId                        fstPolicyHits
+ipv4(1)          FEROSNMP-TEST-MIB::fstPolicyTable  5
+ipv6(2)          SNMPv2-SMI::zeroDotZero            1099511627776

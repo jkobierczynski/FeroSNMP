@@ -153,9 +153,163 @@ fn write_chunk(out: &mut String, spec: &Spec, chunk: &[u8]) {
     }
 }
 
+/// Read an integer written as [`format_integer`] shows it: `-12.5` with
+/// the hint `d-1` is -125. Returns `None` when the text does not fit the
+/// hint, or the hint is not a valid integer hint.
+pub fn parse_integer(hint: &str, text: &str) -> Option<i64> {
+    let text = text.trim();
+    let (negative, digits) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
+    let mut chars = hint.trim().chars();
+    let kind = chars.next()?;
+    let magnitude = match (kind, chars.as_str()) {
+        ('d', "") => digits.parse::<i64>().ok()?,
+        ('d', decimals) => {
+            let decimals: u32 = decimals.strip_prefix('-')?.parse().ok()?;
+            let (whole, fraction) = digits.split_once('.').unwrap_or((digits, ""));
+            if fraction.len() > decimals as usize
+                || !(whole.chars().chain(fraction.chars())).all(|c| c.is_ascii_digit())
+                || (whole.is_empty() && fraction.is_empty())
+            {
+                return None;
+            }
+            let scaled = format!("{whole}{fraction:0<width$}", width = decimals as usize);
+            scaled.parse::<i64>().ok()?
+        }
+        ('x', "") => i64::from_str_radix(digits, 16).ok()?,
+        ('o', "") => i64::from_str_radix(digits, 8).ok()?,
+        ('b', "") => i64::from_str_radix(digits, 2).ok()?,
+        _ => return None,
+    };
+    // from_str_radix and parse accept a sign of their own; one is enough.
+    if digits.starts_with(['-', '+']) {
+        return None;
+    }
+    Some(if negative { -magnitude } else { magnitude })
+}
+
+/// Read octets written as [`format_octets`] shows them: `00:1b:21:0a:ff:09`
+/// with the hint `1x:` is six bytes, `2026-10-29,13:45:30.5` with the
+/// DateAndTime hint is eight. Numbers may leave out leading zeros. Hints
+/// with a repeat count (`*`) are not supported.
+pub fn parse_octets(hint: &str, text: &str) -> Result<Vec<u8>, String> {
+    let specs =
+        parse_octet_hint(hint).ok_or_else(|| format!("{hint:?} is not a display hint for text"))?;
+    if specs.iter().any(|spec| spec.repeat) {
+        return Err(format!(
+            "the display hint {hint:?} repeats parts, which cannot be typed in; give the bytes in hex"
+        ));
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mismatch = |at: usize| {
+        let rest: String = chars[at..].iter().collect();
+        format!("{text:?} does not fit the display hint {hint:?} at {rest:?}")
+    };
+    let mut out = Vec::new();
+    let mut pos = 0;
+    let mut part = 0;
+    while pos < chars.len() {
+        let spec = &specs[part.min(specs.len() - 1)];
+        part += 1;
+        let start = pos;
+        match spec.format {
+            'a' | 't' => {
+                let mut bytes = 0;
+                while pos < chars.len() && Some(chars[pos]) != spec.separator {
+                    let len = chars[pos].len_utf8();
+                    if bytes + len > spec.length {
+                        break;
+                    }
+                    bytes += len;
+                    pos += 1;
+                }
+                let chunk: String = chars[start..pos].iter().collect();
+                out.extend_from_slice(chunk.as_bytes());
+            }
+            format => {
+                let radix = match format {
+                    'd' => 10,
+                    'x' => 16,
+                    _ => 8,
+                };
+                // Hex has a fixed number of digits per byte, so "001b21"
+                // also reads with "1x:".
+                let most = if radix == 16 {
+                    spec.length * 2
+                } else {
+                    usize::MAX
+                };
+                while pos < chars.len() && pos - start < most && chars[pos].is_digit(radix) {
+                    pos += 1;
+                }
+                let digits: String = chars[start..pos].iter().collect();
+                let number = u128::from_str_radix(&digits, radix).map_err(|_| mismatch(start))?;
+                let width = spec.length.min(16);
+                if spec.length < 16 && number >> (8 * width) != 0 {
+                    return Err(format!(
+                        "{digits} does not fit in {} byte{} (display hint {hint:?})",
+                        spec.length,
+                        if spec.length == 1 { "" } else { "s" }
+                    ));
+                }
+                out.extend_from_slice(&number.to_be_bytes()[16 - width..]);
+            }
+        }
+        if pos == start {
+            return Err(mismatch(start));
+        }
+        if pos < chars.len() && Some(chars[pos]) == spec.separator {
+            pos += 1;
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hints_read_back_what_they_show() {
+        assert_eq!(parse_integer("d-1", "-12.5"), Some(-125));
+        assert_eq!(parse_integer("d-2", "3"), Some(300));
+        assert_eq!(parse_integer("d-2", "0.05"), Some(5));
+        assert_eq!(parse_integer("d-1", "1.25"), None);
+        assert_eq!(parse_integer("x", "ff"), Some(255));
+        assert_eq!(parse_integer("d", "--1"), None);
+
+        let mac = [0x00, 0x1b, 0x21, 0x0a, 0xff, 0x09];
+        assert_eq!(parse_octets("1x:", "00:1b:21:0a:ff:09").unwrap(), mac);
+        assert_eq!(parse_octets("1x:", "001b210aff09").unwrap(), mac);
+        assert_eq!(parse_octets("1x:", "0:1b:21:a:ff:9").unwrap(), mac);
+        assert_eq!(parse_octets("255a", "Linux").unwrap(), b"Linux");
+        assert_eq!(
+            parse_octets("1d.1d.1d.1d", "192.0.2.1").unwrap(),
+            [192, 0, 2, 1]
+        );
+        let hint = "2d-1d-1d,1d:1d:1d.1d,1a1d:1d";
+        for bytes in [
+            &[0x07, 0xea, 0x0a, 0x1d, 0x0d, 0x2d, 0x1e, 0x05][..],
+            &[
+                0x07, 0xea, 0x0a, 0x1d, 0x0d, 0x2d, 0x1e, 0x05, b'+', 0x01, 0x00,
+            ],
+        ] {
+            let text = format_octets(hint, bytes).unwrap();
+            assert_eq!(parse_octets(hint, &text).unwrap(), bytes, "{text}");
+        }
+        assert!(
+            parse_octets("1x:", "00:zz")
+                .unwrap_err()
+                .contains("at \"zz\"")
+        );
+        assert!(
+            parse_octets("1d.", "300")
+                .unwrap_err()
+                .contains("does not fit in 1 byte")
+        );
+    }
 
     #[test]
     fn integer_hints() {
