@@ -6,7 +6,8 @@ use std::time::Duration;
 use clap::{Args, ValueEnum};
 use mib_core::{MibSet, Oid, Strictness};
 use snmp_core::{
-    Engine, EngineConfig, Error, Event, Formatter, Operation, Target, Version, raw_line,
+    Engine, EngineConfig, Error, Event, Formatter, ObjectError, Operation, Target, Version,
+    raw_line,
 };
 
 use crate::sources::MibSources;
@@ -197,43 +198,16 @@ fn operation(mibs: &MibSet, query: Query) -> Result<Operation, CliError> {
     })
 }
 
-/// The OID for what the user typed: a numeric OID (`1.3.6.1.2.1.1.1.0`), a
-/// name (`sysDescr`), `MODULE::name`, each optionally followed by an
-/// instance suffix (`ifDescr.3`, `IF-MIB::ifDescr.3`).
+/// The OID for what the user typed; see [`snmp_core::resolve_object`].
 pub fn resolve_object(mibs: &MibSet, text: &str) -> Result<Oid, CliError> {
-    let text = text.trim();
-    if let Ok(oid) = text.parse::<Oid>() {
-        return Ok(oid);
-    }
-    let (module, rest) = match text.split_once("::") {
-        Some((module, rest)) => (Some(module), rest),
-        None => (None, text),
-    };
-    let (name, suffix) = match rest.split_once('.') {
-        Some((name, suffix)) => (name, Some(suffix)),
-        None => (rest, None),
-    };
-    let lookup = match module {
-        Some(module) => format!("{module}::{name}"),
-        None => name.to_string(),
-    };
-    let node = mibs.find(&lookup).ok_or_else(|| {
-        CliError::Message(format!(
-            "unknown object {text:?}: no loaded MIB defines {lookup} \
-             (add MIB folders with -M, or give a numeric OID)"
-        ))
-    })?;
-    let mut arcs = node.oid().arcs().to_vec();
-    if let Some(suffix) = suffix {
-        let suffix: Oid = suffix.parse().map_err(|_| {
-            CliError::Message(format!(
-                "{text:?}: the instance after the name must be numbers separated by dots, \
-                 such as ifDescr.3"
-            ))
-        })?;
-        arcs.extend_from_slice(suffix.arcs());
-    }
-    Ok(Oid::new(arcs))
+    snmp_core::resolve_object(mibs, text).map_err(|error| {
+        CliError::Message(match error {
+            ObjectError::Unknown { .. } => {
+                format!("{error} (add MIB folders with -M, or give a numeric OID)")
+            }
+            other => other.to_string(),
+        })
+    })
 }
 
 /// An error, with OIDs shown by name.

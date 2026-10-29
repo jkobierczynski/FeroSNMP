@@ -15,8 +15,17 @@ while let Some(event) = running.next_event().await {
 ```
 
 `Engine::submit` can be called from any thread, and `Running` has a
-blocking and a non-blocking way to read events, so the GUI thread can use it
-without being async itself (milestone M6).
+blocking and a non-blocking way to read events. The GUI runs the engine on a
+thread of its own and forwards events to the window (see
+`apps/gui/src/query.rs`).
+
+Also here: `resolve_object` turns what a user types (`sysDescr.0`,
+`IF-MIB::ifDescr.3`, `1.3.6.1.2.1`) into an OID, and `Formatter::value_text`
+splits a value into type and text for table columns.
+
+`examples/big_agent.rs` is a tiny agent with a made-up table of any size,
+for trying walks of 100,000 rows and more:
+`cargo run --release -p snmp-core --example big_agent -- 100000`.
 
 ## Tests
 

@@ -7,7 +7,14 @@
 //! mib-folders = ['C:\MIBs\cisco', 'C:\MIBs\juniper']
 //! use-system-folders = true
 //! strictness = "permissive"
+//! agent = "lab switch"
+//!
+//! [[targets]]
+//! name = "lab switch"
+//! host = "192.0.2.10"
 //! ```
+//!
+//! See [`crate::targets`] for the fields of a saved agent.
 //!
 //! Settings the file does not mention keep their defaults, so older files keep
 //! working when settings are added.
@@ -19,8 +26,10 @@ use std::path::{Path, PathBuf};
 use mib_core::{MibLibrary, Strictness};
 use serde::{Deserialize, Serialize};
 
+use crate::targets::SavedTarget;
+
 /// Everything the user can set in the Settings dialog.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Settings {
     /// Folders with MIB files, searched in this order.
@@ -29,6 +38,12 @@ pub struct Settings {
     pub use_system_folders: bool,
     /// How strictly MIB files are read.
     pub strictness: StrictnessSetting,
+    /// What was in the Agent box last time: a saved agent's name or an
+    /// address.
+    pub agent: String,
+    /// The saved agents, in the order the Agent box lists them. Written
+    /// last, because TOML tables must follow the plain values.
+    pub targets: Vec<SavedTarget>,
 }
 
 impl Default for Settings {
@@ -37,6 +52,8 @@ impl Default for Settings {
             mib_folders: Vec::new(),
             use_system_folders: true,
             strictness: StrictnessSetting::Permissive,
+            agent: String::new(),
+            targets: Vec::new(),
         }
     }
 }
@@ -203,6 +220,12 @@ mod tests {
             ],
             use_system_folders: false,
             strictness: StrictnessSetting::Strict,
+            agent: "lab".into(),
+            targets: vec![SavedTarget {
+                name: "lab".into(),
+                host: "192.0.2.10".into(),
+                ..SavedTarget::default()
+            }],
         };
         settings.save(&path).unwrap();
         let text = std::fs::read_to_string(&path).unwrap();

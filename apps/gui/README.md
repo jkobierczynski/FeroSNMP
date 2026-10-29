@@ -1,7 +1,8 @@
 # ferosnmp-gui
 
-The FeroSNMP window: browse the loaded MIBs as a tree, search them, and see
-everything about a node. Runs on Windows 10 and Windows 11.
+The FeroSNMP window: browse the loaded MIBs as a tree, search them, see
+everything about a node, and query SNMP agents (GET, GETNEXT, GETBULK and
+WALK over SNMPv1 and SNMPv2c). Runs on Windows 10 and Windows 11.
 
 ## Building and running
 
@@ -39,14 +40,59 @@ cargo run --release -p ferosnmp-gui --target-dir target\windows
   `%APPDATA%\FeroSNMP\settings.toml`. Without any folders only the built-in
   modules (SNMPv2-SMI and friends) are loaded.
 - MIBs load in the background; the window stays usable and the status bar
-  says when loading is done. **F5** loads them again, for example after you
-  changed a MIB file.
+  says when loading is done. **Ctrl+R** loads them again, for example after
+  you changed a MIB file.
 - **Ctrl+F** jumps to the search box. Type a name (`ifDescr`), a qualified
   name (`IF-MIB::ifDescr`), an OID (`1.3.6.1.2.1.2.2.1.2`, also an instance
   such as `ifDescr.7`) or a pattern with `*` and `?` (`if*Octets`), then press
   **Enter**. **Enter** again or **F3** goes to the next match, **Shift+F3** to
   the previous one, **Esc** back to the tree.
 - Drag the bars between the panes to resize them.
+
+### Querying an agent
+
+The second row of the toolbar has an **Agent** box, an **Object** box and
+the query buttons.
+
+- **Agent**: pick a saved agent from the list, or type an address such as
+  `192.0.2.1`, `router:1161` or `[2001:db8::1]:161`. A typed address uses
+  SNMPv2c, community `public`, a timeout of 2 seconds and 2 retries.
+  **File > Agents** (or the **Agents...** button) saves agents with their
+  own version, port, community, timeout, retries and max-repetitions. They
+  are kept in `settings.toml`; the community is stored as plain text there,
+  like net-snmp's `snmp.conf`.
+- **Object**: what to ask for. Clicking a node in the tree fills it in
+  (`sysDescr.0` for a scalar, `IF-MIB::ifTable` for a table). You can type a
+  name, `MODULE::name`, a name with an instance (`ifDescr.3`) or a numeric
+  OID.
+- **Get** reads the object (a scalar without `.0` gets it added), **Next**
+  the instance after it (and puts that instance in the Object box, so
+  pressing Next again steps on), **Bulk** one GETBULK request, **Walk**
+  everything below it. **Enter** in either box runs the last kind of query
+  again, and **F5** repeats the last query exactly.
+- Results stream into the **Results** tab while you scroll; the tab title
+  and the status bar show the count. **Cancel** or **Esc** stops a query.
+  Starting a new query stops the one running.
+- **Raw** (or **View > Raw values**, **Ctrl+Shift+R**) shows numeric OIDs,
+  ASN.1 tags and the bytes of each value in hex.
+- **Ctrl+C** copies the selected rows, tab-separated, so they paste into a
+  spreadsheet as columns; **Ctrl+A** selects all of them. Right-click for
+  *Copy Value* (or the column you clicked), *Copy OID*, *Show in MIB tree*
+  (also **Enter** or a double click), *Export as CSV* (also **Ctrl+S**) and
+  *Clear results*. Ctrl+C in the tree copies the node's numeric OID.
+- **Ctrl+F** searches the results when you used the Results list last
+  (**F3** for the next match); click the tree to search the MIBs again.
+- The **Log** tab lists each query, every request with its request-id,
+  retries and time, and how the query ended.
+
+To try a walk of 100,000 rows, start the test agent from WSL or PowerShell:
+
+```powershell
+cargo run --release -p snmp-core --example big_agent -- 100000 127.0.0.1:11162
+```
+
+then type `127.0.0.1:11162` in the Agent box, `1.3.6.1.4.1.99999` in the
+Object box (three columns, so 300,000 values) and press **Walk**.
 
 ### Diagnostics
 
@@ -83,7 +129,11 @@ Bash), then add the repository's `corpus` folder in Settings.
 | `src/diagnostics.rs` | The Diagnostics list's rows and columns, and the export formats. |
 | `src/rich_text.rs` | MIB source as coloured RTF for the source window. |
 | `src/file_stamps.rs` | Noticing loaded files that changed on disk. |
-| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, Diagnostics tab, source and "why" windows, Settings dialog. |
+| `src/targets.rs` | Saved agents, and what the Agent box means. |
+| `src/query.rs` | The SNMP engine's thread, and handing results to the window in batches. |
+| `src/results.rs` | The Results tab's cells, copying and the CSV export. |
+| `src/oplog.rs` | The Log tab. |
+| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, the Results, Log and Diagnostics tabs, source and "why" windows, Settings and Agents dialogs. |
 
 Everything outside `src/ui/` is plain Rust and is tested on every platform
 (`cargo test -p ferosnmp-gui`). The Win32 helpers that are not specific to
@@ -97,3 +147,11 @@ the window *while* a call is still running (expanding a tree item sends a
 notification before `TVM_EXPAND` returns), so window state lives in `Cell`
 and `RefCell` and a `RefCell` borrow is never held across such a call. See
 the `fero_win32::window` documentation.
+
+Queries never run on the UI thread. `src/query.rs` starts one thread with a
+tokio runtime and the `snmp-core` engine; the window submits an operation
+and gets a handle back at once. The engine's thread posts `WM_APP_QUERY`
+only when the handle's inbox was empty, and the window takes everything
+waiting in one go, at most every 50 ms. Posted messages come before
+painting in a Win32 message queue, so taking results any faster would
+leave the list no time to paint them during a fast walk.
