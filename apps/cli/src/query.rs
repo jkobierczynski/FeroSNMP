@@ -7,7 +7,7 @@ use clap::{Args, ValueEnum};
 use mib_core::{MibSet, Oid, Strictness};
 use snmp_core::{
     AuthProtocol, Engine, EngineConfig, Error, Event, Formatter, ObjectError, Operation,
-    PrivProtocol, SecurityLevel, Target, Usm, Version, hex, parse_hex, raw_line,
+    PrivProtocol, SecurityLevel, Target, Usm, Version, hex, parse_hex, raw_line, uptime_text,
 };
 
 use crate::sources::MibSources;
@@ -28,9 +28,6 @@ pub struct QueryArgs {
     /// Community string (SNMPv1 and SNMPv2c).
     #[arg(short = 'c', long, default_value = "public")]
     pub community: String,
-
-    #[command(flatten)]
-    pub v3: V3Args,
 
     /// Seconds to wait for each response.
     #[arg(short = 't', long, default_value_t = 2.0, value_name = "SECONDS",
@@ -55,6 +52,9 @@ pub struct QueryArgs {
 
     #[command(flatten)]
     pub sources: MibSources,
+
+    #[command(flatten)]
+    pub v3: V3Args,
 }
 
 /// SNMPv3 options, named as in net-snmp's tools.
@@ -255,7 +255,12 @@ pub fn run(args: &QueryArgs, query: Query, out: &mut impl Write) -> Result<Statu
                     if discover {
                         writeln!(out, "engine ID:    {}", hex(&info.engine_id))?;
                         writeln!(out, "engine boots: {}", info.boots)?;
-                        writeln!(out, "engine time:  {} ({} s)", uptime(info.time), info.time)?;
+                        writeln!(
+                            out,
+                            "engine time:  {} ({} s)",
+                            uptime_text(info.time),
+                            info.time
+                        )?;
                     } else if args.log {
                         eprintln!("ferosnmp: {info}");
                     }
@@ -323,22 +328,6 @@ fn operation(mibs: &MibSet, query: Query) -> Result<Operation, CliError> {
     })
 }
 
-/// Seconds as `3 d 4 h 5 min 6 s`, leaving out leading zero units.
-fn uptime(seconds: u32) -> String {
-    let parts = [
-        (seconds / 86_400, "d"),
-        (seconds / 3600 % 24, "h"),
-        (seconds / 60 % 60, "min"),
-        (seconds % 60, "s"),
-    ];
-    let first = parts.iter().position(|(n, _)| *n > 0).unwrap_or(3);
-    parts[first..]
-        .iter()
-        .map(|(n, unit)| format!("{n} {unit}"))
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 /// The OID for what the user typed; see [`snmp_core::resolve_object`].
 pub fn resolve_object(mibs: &MibSet, text: &str) -> Result<Oid, CliError> {
     snmp_core::resolve_object(mibs, text).map_err(|error| {
@@ -387,12 +376,5 @@ mod tests {
         assert!(oid("noSuchThing.0").is_err());
         assert!(oid("enterprises.x").is_err());
         assert!(oid("NO-SUCH-MIB::enterprises").is_err());
-    }
-
-    #[test]
-    fn uptime_text() {
-        assert_eq!(uptime(0), "0 s");
-        assert_eq!(uptime(61), "1 min 1 s");
-        assert_eq!(uptime(90_061), "1 d 1 h 1 min 1 s");
     }
 }

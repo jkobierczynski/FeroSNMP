@@ -3,6 +3,37 @@
 All notable changes to FeroSNMP. Versions follow [Semantic Versioning](https://semver.org/);
 before 1.0, a minor version may change behaviour.
 
+## [Unreleased]
+
+SNMPv3 with the User-based Security Model.
+
+### SNMPv3
+
+- Security levels `noAuthNoPriv`, `authNoPriv` and `authPriv`;
+  authentication with MD5, SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512;
+  privacy with DES, AES-128, AES-192 and AES-256, with both AES-192/256 key
+  extensions (most agents, and Cisco's as `AES-192C`/`AES-256C`).
+- Pure-Rust crypto (RustCrypto); no OpenSSL.
+- Engine discovery, remembered per agent with the derived keys; a clock
+  that is out of step is synchronized, and an agent whose engine ID changed
+  is discovered again.
+- A clear error for each failure: unknown user, wrong authentication
+  password or protocol, wrong privacy password or protocol (also when the
+  agent silently drops what it cannot decrypt, as net-snmp does), security
+  level the user does not have, time window, unknown context. An
+  `authorizationError` comes with a hint about the agent's access rules.
+- Command line: `-v 3` (implied by `-u`) with net-snmp's options `-u`, `-l`,
+  `-a`, `-A`, `-x`, `-X`, plus `--context`, `--context-engine-id`, and the
+  environment variables `FEROSNMP_AUTH_PASSWORD` and
+  `FEROSNMP_PRIV_PASSWORD`. New `ferosnmp discover AGENT` shows an agent's
+  engine ID, boots and time.
+- Window: SNMPv3 settings in File > Agents; the passwords are kept in the
+  Windows Credential Manager, not in `settings.toml`. The Log tab shows the
+  engine ID, boots and uptime.
+- Tests: the net-snmp CI job walks with every authentication and privacy
+  protocol (30 users), and checks each error.
+- How to add an SNMPv3 user to net-snmp's snmpd: `docs/snmpv3.md`.
+
 ## [0.2.0]
 
 SNMP queries: GET, GETNEXT, GETBULK and WALK over SNMPv1 and SNMPv2c, in the

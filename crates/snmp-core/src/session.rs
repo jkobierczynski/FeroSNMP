@@ -169,6 +169,23 @@ impl fmt::Display for EngineInfo {
     }
 }
 
+/// Seconds as `3 d 4 h 5 min 6 s`, leaving out leading zero units: for
+/// [`EngineInfo::time`].
+pub fn uptime_text(seconds: u32) -> String {
+    let parts = [
+        (seconds / 86_400, "d"),
+        (seconds / 3600 % 24, "h"),
+        (seconds / 60 % 60, "min"),
+        (seconds % 60, "s"),
+    ];
+    let first = parts.iter().position(|(n, _)| *n > 0).unwrap_or(3);
+    parts[first..]
+        .iter()
+        .map(|(n, unit)| format!("{n} {unit}"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// An engine's boots and time, and when we heard them.
 #[derive(Debug, Clone)]
 struct KnownEngine {
@@ -769,6 +786,13 @@ mod tests {
             bulk.to_string(),
             "GETBULK 1.3.6.1.2.1.1 (non-repeaters 0, max-repetitions 10)"
         );
+    }
+
+    #[test]
+    fn uptime() {
+        assert_eq!(uptime_text(0), "0 s");
+        assert_eq!(uptime_text(61), "1 min 1 s");
+        assert_eq!(uptime_text(90_061), "1 d 1 h 1 min 1 s");
     }
 
     #[test]

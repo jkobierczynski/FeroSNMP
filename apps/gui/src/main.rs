@@ -22,6 +22,7 @@ mod oplog;
 mod query;
 mod results;
 mod rich_text;
+mod secrets;
 mod settings;
 mod targets;
 #[cfg(test)]

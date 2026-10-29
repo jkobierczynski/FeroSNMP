@@ -18,6 +18,7 @@
 
 mod agents_dialog;
 mod bottom_panel;
+mod credentials;
 mod details;
 mod icons;
 mod main_window;

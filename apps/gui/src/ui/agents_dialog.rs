@@ -1,8 +1,10 @@
 //! The Agents dialog: add, change and delete saved agents.
 //!
 //! The list on the left shows the saved agents; the fields on the right
-//! show the selected one. Changes are kept when another agent is selected,
-//! and checked when OK is pressed.
+//! show the selected one: the common settings in the middle, the SNMPv3
+//! user on the right. Changes are kept when another agent is selected, and
+//! checked when OK is pressed. SNMPv3 passwords are stored in the Windows
+//! Credential Manager by the main window, never in the settings file.
 
 use std::cell::{Cell, RefCell};
 
@@ -10,17 +12,19 @@ use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::Controls::EM_SETSEL;
 use windows::Win32::UI::Input::KeyboardAndMouse::{EnableWindow, SetFocus};
 use windows::Win32::UI::WindowsAndMessaging::{
-    BS_DEFPUSHBUTTON, BS_PUSHBUTTON, CB_ADDSTRING, CB_GETCURSEL, CB_SETCURSEL, CBS_DROPDOWNLIST,
-    ES_AUTOHSCROLL, ES_NUMBER, EndDialog, GetDlgItem, LB_ADDSTRING, LB_DELETESTRING, LB_ERR,
-    LB_GETCURSEL, LB_INSERTSTRING, LB_RESETCONTENT, LB_SETCURSEL, LBN_SELCHANGE,
-    LBS_NOINTEGRALHEIGHT, LBS_NOTIFY, SendMessageW, SetWindowTextW, WINDOW_EX_STYLE, WINDOW_STYLE,
-    WM_COMMAND, WM_INITDIALOG, WS_BORDER, WS_EX_CLIENTEDGE, WS_TABSTOP, WS_VSCROLL,
+    BS_DEFPUSHBUTTON, BS_PUSHBUTTON, CB_ADDSTRING, CB_GETCURSEL, CB_SETCURSEL, CBN_SELCHANGE,
+    CBS_DROPDOWNLIST, ES_AUTOHSCROLL, ES_NUMBER, ES_PASSWORD, EndDialog, GetDlgItem, LB_ADDSTRING,
+    LB_DELETESTRING, LB_ERR, LB_GETCURSEL, LB_INSERTSTRING, LB_RESETCONTENT, LB_SETCURSEL,
+    LBN_SELCHANGE, LBS_NOINTEGRALHEIGHT, LBS_NOTIFY, SendMessageW, SetWindowTextW, WINDOW_EX_STYLE,
+    WINDOW_STYLE, WM_COMMAND, WM_INITDIALOG, WS_BORDER, WS_EX_CLIENTEDGE, WS_TABSTOP, WS_VSCROLL,
 };
 use windows::core::HSTRING;
 
 use fero_win32::dialog::{ControlClass, Dialog, DialogTemplate};
 use fero_win32::text::window_text;
 use fero_win32::{hiword, loword};
+
+use snmp_core::{AuthProtocol, PrivProtocol, SecurityLevel};
 
 use crate::targets::{SavedTarget, VersionSetting};
 
@@ -37,6 +41,13 @@ const COMMUNITY: u16 = 1014;
 const TIMEOUT: u16 = 1015;
 const RETRIES: u16 = 1016;
 const REPETITIONS: u16 = 1017;
+const USER: u16 = 1020;
+const LEVEL: u16 = 1021;
+const AUTH_PROTOCOL: u16 = 1022;
+const AUTH_PASSWORD: u16 = 1023;
+const PRIV_PROTOCOL: u16 = 1024;
+const PRIV_PASSWORD: u16 = 1025;
+const CONTEXT: u16 = 1026;
 const OK: u16 = 1;
 const CANCEL: u16 = 2;
 
@@ -50,6 +61,17 @@ const FIELDS: [(u16, &str); 8] = [
     (TIMEOUT, "&Timeout (seconds):"),
     (RETRIES, "&Retries:"),
     (REPETITIONS, "&Max-repetitions:"),
+];
+
+/// The SNMPv3 fields, in the right-hand column.
+const V3_FIELDS: [(u16, &str); 7] = [
+    (USER, "&User:"),
+    (LEVEL, "&Security level:"),
+    (AUTH_PROTOCOL, "A&uth protocol:"),
+    (AUTH_PASSWORD, "Auth pass&word:"),
+    (PRIV_PROTOCOL, "Pri&vacy protocol:"),
+    (PRIV_PASSWORD, "Privacy pa&ssword:"),
+    (CONTEXT, "Conte&xt name:"),
 ];
 
 // Static control style (not in the parts of the windows crate we use).
@@ -71,7 +93,7 @@ pub fn show(owner: HWND, targets: &[SavedTarget], current: &str) -> Option<Edite
     let style = |bits: i32| WINDOW_STYLE(bits as u32);
     let button = style(BS_PUSHBUTTON) | WS_TABSTOP;
     let edit = style(ES_AUTOHSCROLL) | WS_TABSTOP | WS_BORDER;
-    let mut template = DialogTemplate::new("Agents", 330, 184, "Segoe UI", 9)
+    let mut template = DialogTemplate::new("Agents", 520, 184, "Segoe UI", 9)
         .control(
             ControlClass::Static,
             "Saved &agents:",
@@ -149,7 +171,62 @@ pub fn show(owner: HWND, targets: &[SavedTarget], current: &str) -> Option<Edite
             ),
         };
     }
+    template = template.control(
+        ControlClass::Static,
+        "SNMPv3",
+        0,
+        WINDOW_STYLE(0),
+        none,
+        (335, 7, 120, 9),
+    );
+    for (row, (id, label)) in V3_FIELDS.into_iter().enumerate() {
+        let y = 18 + 17 * row as i16;
+        template = template.control(
+            ControlClass::Static,
+            label,
+            0,
+            WINDOW_STYLE(0),
+            none,
+            (335, y + 2, 68, 9),
+        );
+        template = match id {
+            LEVEL | AUTH_PROTOCOL | PRIV_PROTOCOL => template.control(
+                ControlClass::ComboBox,
+                "",
+                id,
+                style(CBS_DROPDOWNLIST) | WS_VSCROLL | WS_TABSTOP,
+                none,
+                (406, y, 90, 100),
+            ),
+            AUTH_PASSWORD | PRIV_PASSWORD => template.control(
+                ControlClass::Edit,
+                "",
+                id,
+                edit | style(ES_PASSWORD),
+                WS_EX_CLIENTEDGE,
+                (406, y, 107, 13),
+            ),
+            _ => template.control(
+                ControlClass::Edit,
+                "",
+                id,
+                edit,
+                WS_EX_CLIENTEDGE,
+                (406, y, 107, 13),
+            ),
+        };
+    }
     let template = template
+        .control(
+            ControlClass::Static,
+            "Passwords are kept in the Windows Credential Manager, not in the \
+             settings file. An empty privacy password means the same as the \
+             authentication password.",
+            0,
+            WINDOW_STYLE(SS_NOPREFIX),
+            none,
+            (335, 137, 178, 26),
+        )
         .control(
             ControlClass::Static,
             "An address typed in the Agent box without saving it uses SNMPv2c, \
@@ -157,7 +234,7 @@ pub fn show(owner: HWND, targets: &[SavedTarget], current: &str) -> Option<Edite
             0,
             WINDOW_STYLE(SS_NOPREFIX),
             none,
-            (7, 161, 200, 18),
+            (7, 161, 300, 18),
         )
         .control(
             ControlClass::Button,
@@ -165,7 +242,7 @@ pub fn show(owner: HWND, targets: &[SavedTarget], current: &str) -> Option<Edite
             OK,
             style(BS_DEFPUSHBUTTON) | WS_TABSTOP,
             none,
-            (213, 163, 52, 14),
+            (403, 165, 52, 14),
         )
         .control(
             ControlClass::Button,
@@ -173,7 +250,7 @@ pub fn show(owner: HWND, targets: &[SavedTarget], current: &str) -> Option<Edite
             CANCEL,
             button,
             none,
-            (269, 163, 54, 14),
+            (459, 165, 54, 14),
         );
 
     let current = current.trim();
@@ -244,20 +321,26 @@ impl Dialog for AgentsDialog {
 
 impl AgentsDialog {
     fn init(&self, hwnd: HWND) {
-        let combo = item(hwnd, VERSION);
-        // SAFETY: plain combo box messages; the strings live until each call
-        // returns, and the combo box copies them.
-        unsafe {
-            for version in VersionSetting::ALL {
-                let label = HSTRING::from(version.label());
-                SendMessageW(
-                    combo,
-                    CB_ADDSTRING,
-                    None,
-                    Some(LPARAM(label.as_ptr() as isize)),
-                );
+        let fill = |id: u16, labels: &[&str]| {
+            let combo = item(hwnd, id);
+            // SAFETY: plain combo box messages; the strings live until each
+            // call returns, and the combo box copies them.
+            unsafe {
+                for label in labels {
+                    let label = HSTRING::from(*label);
+                    SendMessageW(
+                        combo,
+                        CB_ADDSTRING,
+                        None,
+                        Some(LPARAM(label.as_ptr() as isize)),
+                    );
+                }
             }
-        }
+        };
+        fill(VERSION, &VersionSetting::ALL.map(VersionSetting::label));
+        fill(LEVEL, &SecurityLevel::ALL.map(SecurityLevel::name));
+        fill(AUTH_PROTOCOL, &AuthProtocol::ALL.map(AuthProtocol::name));
+        fill(PRIV_PROTOCOL, &PrivProtocol::ALL.map(priv_label));
         self.fill_list(hwnd);
         if let Some(host) = &self.new_host {
             self.add(hwnd, host);
@@ -279,6 +362,7 @@ impl AgentsDialog {
                 self.store(hwnd);
                 self.show_target(hwnd, list_selection(hwnd));
             }
+            (VERSION | LEVEL, CBN_SELCHANGE) => self.enable_fields(hwnd),
             (NEW, _) => {
                 self.store(hwnd);
                 self.add(hwnd, "");
@@ -395,23 +479,87 @@ impl AgentsDialog {
         set(TIMEOUT, &target.timeout.to_string());
         set(RETRIES, &target.retries.to_string());
         set(REPETITIONS, &target.max_repetitions.to_string());
-        let version = VersionSetting::ALL
-            .iter()
-            .position(|&v| v == target.version)
-            .unwrap_or(0);
+        set(USER, &target.user);
+        set(AUTH_PASSWORD, &target.auth_password);
+        set(PRIV_PASSWORD, &target.priv_password);
+        set(CONTEXT, &target.context);
+        let position = |found: Option<usize>| found.unwrap_or(0);
         // SAFETY: plain control messages on our own controls.
         unsafe {
-            send(item(hwnd, VERSION), CB_SETCURSEL, version, 0);
+            let select = |id: u16, index: usize| send(item(hwnd, id), CB_SETCURSEL, index, 0);
+            select(
+                VERSION,
+                position(
+                    VersionSetting::ALL
+                        .iter()
+                        .position(|&v| v == target.version),
+                ),
+            );
+            select(
+                LEVEL,
+                position(
+                    SecurityLevel::ALL
+                        .iter()
+                        .position(|&v| v == target.security_level),
+                ),
+            );
+            select(
+                AUTH_PROTOCOL,
+                position(
+                    AuthProtocol::ALL
+                        .iter()
+                        .position(|&v| v == target.auth_protocol),
+                ),
+            );
+            select(
+                PRIV_PROTOCOL,
+                position(
+                    PrivProtocol::ALL
+                        .iter()
+                        .position(|&v| v == target.priv_protocol),
+                ),
+            );
             send(
                 item(hwnd, LIST),
                 LB_SETCURSEL,
                 index.unwrap_or(usize::MAX),
                 0,
             );
-            for (id, _) in FIELDS {
-                let _ = EnableWindow(item(hwnd, id), enabled);
-            }
             let _ = EnableWindow(item(hwnd, DELETE), enabled);
+        }
+        self.enable_fields(hwnd);
+    }
+
+    /// Enable the fields that apply to the selected version and security
+    /// level; all are disabled when no agent is shown.
+    fn enable_fields(&self, hwnd: HWND) {
+        let shown = self.shown.get().is_some();
+        let selected = |id: u16| {
+            // SAFETY: plain combo box message.
+            let index = unsafe { send(item(hwnd, id), CB_GETCURSEL, 0, 0).0 };
+            usize::try_from(index).ok()
+        };
+        let v3 = selected(VERSION).and_then(|i| VersionSetting::ALL.get(i).copied())
+            == Some(VersionSetting::V3);
+        let level = selected(LEVEL)
+            .and_then(|i| SecurityLevel::ALL.get(i).copied())
+            .unwrap_or_default();
+        let enable = |id: u16, on: bool| {
+            // SAFETY: enabling one of our own controls.
+            unsafe {
+                let _ = EnableWindow(item(hwnd, id), on);
+            }
+        };
+        for (id, _) in FIELDS {
+            enable(id, shown && (id != COMMUNITY || !v3));
+        }
+        for (id, _) in V3_FIELDS {
+            let on = match id {
+                AUTH_PROTOCOL | AUTH_PASSWORD => level.has_auth(),
+                PRIV_PROTOCOL | PRIV_PASSWORD => level.has_priv(),
+                _ => true,
+            };
+            enable(id, shown && v3 && on);
         }
     }
 
@@ -423,8 +571,11 @@ impl AgentsDialog {
             return;
         };
         let text = |id: u16| window_text(item(hwnd, id)).trim().to_string();
-        // SAFETY: plain combo box message.
-        let version = unsafe { send(item(hwnd, VERSION), CB_GETCURSEL, 0, 0).0 };
+        let selected = |id: u16| {
+            // SAFETY: plain combo box message.
+            let index = unsafe { send(item(hwnd, id), CB_GETCURSEL, 0, 0).0 };
+            usize::try_from(index).ok()
+        };
         let name = text(NAME);
         {
             let mut targets = self.targets.borrow_mut();
@@ -436,11 +587,24 @@ impl AgentsDialog {
                 name: name.clone(),
                 host: text(HOST),
                 port: text(PORT).parse().unwrap_or(0),
-                version: usize::try_from(version)
-                    .ok()
+                version: selected(VERSION)
                     .and_then(|i| VersionSetting::ALL.get(i).copied())
                     .unwrap_or_default(),
                 community: window_text(item(hwnd, COMMUNITY)),
+                user: text(USER),
+                security_level: selected(LEVEL)
+                    .and_then(|i| SecurityLevel::ALL.get(i).copied())
+                    .unwrap_or_default(),
+                auth_protocol: selected(AUTH_PROTOCOL)
+                    .and_then(|i| AuthProtocol::ALL.get(i).copied())
+                    .unwrap_or_default(),
+                // Passwords are kept as typed, spaces included.
+                auth_password: window_text(item(hwnd, AUTH_PASSWORD)),
+                priv_protocol: selected(PRIV_PROTOCOL)
+                    .and_then(|i| PrivProtocol::ALL.get(i).copied())
+                    .unwrap_or_default(),
+                priv_password: window_text(item(hwnd, PRIV_PASSWORD)),
+                context: text(CONTEXT),
                 timeout: text(TIMEOUT).replace(',', ".").parse().unwrap_or(f64::NAN),
                 retries: text(RETRIES).parse().unwrap_or(u32::MAX),
                 max_repetitions: text(REPETITIONS).parse().unwrap_or(0),
@@ -494,6 +658,18 @@ impl AgentsDialog {
             &format!("{title} cannot be saved yet.\n\n{problem}"),
         );
         false
+    }
+}
+
+/// What the privacy list shows: the name, and which AES key extension.
+fn priv_label(protocol: PrivProtocol) -> &'static str {
+    match protocol {
+        PrivProtocol::Des => "DES",
+        PrivProtocol::Aes128 => "AES-128",
+        PrivProtocol::Aes192 => "AES-192",
+        PrivProtocol::Aes256 => "AES-256",
+        PrivProtocol::Aes192Cisco => "AES-192 (Cisco)",
+        PrivProtocol::Aes256Cisco => "AES-256 (Cisco)",
     }
 }
 

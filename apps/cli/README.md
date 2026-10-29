@@ -88,7 +88,12 @@ ferosnmp bulk 192.0.2.1 ifDescr ifOperStatus --max-repetitions 5
 ferosnmp walk 192.0.2.1 system
 ferosnmp walk 192.0.2.1 ifTable -c private -v 1
 ferosnmp walk 192.0.2.1:1161 1.3.6.1.4.1.9 --log    # every request with its timing
+ferosnmp walk 192.0.2.1 system -u monitor -a SHA-256 -A "auth pass" -x AES -X "priv pass"
+ferosnmp discover 192.0.2.1                         # SNMPv3 engine ID, boots and time
 ```
+
+SNMPv3, including how to add a user to net-snmp's snmpd and what each error
+means, is described in [docs/snmpv3.md](../../docs/snmpv3.md).
 
 The agent is a host name or address, optionally with `:port` (default 161;
 IPv6 with a port as `[2001:db8::1]:161`). Objects are names (`sysDescr`),
@@ -97,8 +102,16 @@ IPv6 with a port as `[2001:db8::1]:161`). Objects are names (`sysDescr`),
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `-v 1\|2c` | `2c` | SNMP version (SNMPv3 follows in a later release) |
-| `-c TEXT` | `public` | Community |
+| `-v 1\|2c\|3` | `2c`, or `3` with `-u` | SNMP version |
+| `-c TEXT` | `public` | Community (SNMPv1, SNMPv2c) |
+| `-u NAME` | | SNMPv3 user |
+| `-l LEVEL` | from the passwords | `noAuthNoPriv`, `authNoPriv` or `authPriv` |
+| `-a PROTOCOL` | `SHA` | Authentication: `MD5`, `SHA`, `SHA-224`, `SHA-256`, `SHA-384`, `SHA-512` |
+| `-A TEXT` | | Authentication password; or set `FEROSNMP_AUTH_PASSWORD` |
+| `-x PROTOCOL` | `AES` | Privacy: `DES`, `AES`, `AES-192`, `AES-256`, `AES-192C`, `AES-256C` |
+| `-X TEXT` | the `-A` password | Privacy password; or set `FEROSNMP_PRIV_PASSWORD` |
+| `--context NAME` | empty | SNMPv3 context name |
+| `--context-engine-id HEX` | the agent's | SNMPv3 context engine ID, for proxies |
 | `-t SECONDS` | `2` | Wait this long for each response |
 | `-r N` | `2` | Send a request again this many times when no response arrives |
 | `-n` | | Numeric OIDs instead of names |
@@ -130,7 +143,7 @@ single instance (`walk host sysDescr.0`) fetches it with GET.
 | Code | Meaning |
 |------|---------|
 | 0 | Success; `lint` found nothing at or above `--fail-on` |
-| 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, `lint` found problems at or above `--fail-on` (default `error`), or the agent answered with an error (such as `noSuchName`) or a "no such object/instance" value |
+| 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, `lint` found problems at or above `--fail-on` (default `error`), or the agent answered with an error (such as `noSuchName`), a "no such object/instance" value, or an SNMPv3 security error (unknown user, wrong password, ...) |
 | 2 | The command could not run: bad arguments, a file or folder that cannot be read, an unknown object name, or no response from the agent |
 
 For a CI job that should also fail on warnings, use

@@ -5,7 +5,7 @@
 use std::collections::VecDeque;
 use std::time::Duration;
 
-use snmp_core::{LogEntry, Summary};
+use snmp_core::{EngineInfo, LogEntry, Summary, hex, uptime_text as uptime};
 
 use crate::results::count_text;
 
@@ -121,6 +121,22 @@ pub fn summary_text(summary: &Summary) -> String {
         count_text(summary.requests as usize),
         if summary.requests == 1 { "" } else { "s" },
         seconds(summary.elapsed)
+    )
+}
+
+/// An SNMPv3 agent's engine:
+/// `SNMPv3 engine ID 80001f88..., boots 3, time 1 d 2 h (discovered)`.
+pub fn engine_text(info: &EngineInfo) -> String {
+    format!(
+        "SNMPv3 engine ID {}, boots {}, up {} ({})",
+        hex(&info.engine_id),
+        info.boots,
+        uptime(info.time),
+        if info.fresh {
+            "discovered"
+        } else {
+            "remembered"
+        }
     )
 }
 
