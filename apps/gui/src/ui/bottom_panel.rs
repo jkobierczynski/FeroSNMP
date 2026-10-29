@@ -1,7 +1,9 @@
-//! The panel along the bottom of the window: a tab control with three tabs,
+//! The panel along the bottom of the window: a tab control with four tabs,
 //! each holding a virtual list.
 //!
 //! - **Results**: the values of the last query.
+//! - **Table**: the last table walked with Table, as rows and columns. Its
+//!   columns change with the table.
 //! - **Log**: every request sent, with timings, and how each query ended.
 //! - **Diagnostics**: every problem found while loading the MIBs.
 //!
@@ -13,13 +15,14 @@
 use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
 use windows::Win32::UI::Controls::{
     LIST_VIEW_ITEM_STATE_FLAGS, LVCF_FMT, LVCF_TEXT, LVCF_WIDTH, LVCFMT_LEFT, LVCFMT_RIGHT,
-    LVCOLUMNW, LVIF_STATE, LVIF_TEXT, LVIS_FOCUSED, LVIS_SELECTED, LVITEMW, LVM_ENSUREVISIBLE,
-    LVM_GETNEXTITEM, LVM_GETSELECTEDCOUNT, LVM_INSERTCOLUMNW, LVM_SETCOLUMNW, LVM_SETCOLUMNWIDTH,
-    LVM_SETEXTENDEDLISTVIEWSTYLE, LVM_SETITEMCOUNT, LVM_SETITEMSTATE, LVNI_SELECTED,
-    LVS_EX_DOUBLEBUFFER, LVS_EX_FULLROWSELECT, LVS_EX_LABELTIP, LVS_NOSORTHEADER, LVS_OWNERDATA,
-    LVS_REPORT, LVS_SHOWSELALWAYS, LVS_SINGLESEL, LVSICF_NOINVALIDATEALL, LVSICF_NOSCROLL,
-    NMLVDISPINFOW, SetWindowTheme, TCIF_TEXT, TCITEMW, TCM_ADJUSTRECT, TCM_GETCURSEL,
-    TCM_INSERTITEMW, TCM_SETCURSEL, TCM_SETITEMW, WC_LISTVIEWW, WC_TABCONTROLW,
+    LVCOLUMNW, LVIF_STATE, LVIF_TEXT, LVIS_FOCUSED, LVIS_SELECTED, LVITEMW, LVM_DELETECOLUMN,
+    LVM_ENSUREVISIBLE, LVM_GETCOLUMNWIDTH, LVM_GETNEXTITEM, LVM_GETSELECTEDCOUNT,
+    LVM_INSERTCOLUMNW, LVM_SETCOLUMNW, LVM_SETCOLUMNWIDTH, LVM_SETEXTENDEDLISTVIEWSTYLE,
+    LVM_SETITEMCOUNT, LVM_SETITEMSTATE, LVNI_SELECTED, LVS_EX_DOUBLEBUFFER, LVS_EX_FULLROWSELECT,
+    LVS_EX_LABELTIP, LVS_NOSORTHEADER, LVS_OWNERDATA, LVS_REPORT, LVS_SHOWSELALWAYS, LVS_SINGLESEL,
+    LVSCW_AUTOSIZE, LVSICF_NOINVALIDATEALL, LVSICF_NOSCROLL, NMLVDISPINFOW, SetWindowTheme,
+    TCIF_TEXT, TCITEMW, TCM_ADJUSTRECT, TCM_GETCURSEL, TCM_INSERTITEMW, TCM_SETCURSEL,
+    TCM_SETITEMW, WC_LISTVIEWW, WC_TABCONTROLW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, HMENU, HWND_TOP, SW_HIDE, SW_SHOW, SWP_NOACTIVATE, SWP_NOCOPYBITS, SWP_NOMOVE,
@@ -43,12 +46,13 @@ use super::{id, send};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     Results,
+    Table,
     Log,
     Diagnostics,
 }
 
 impl Tab {
-    const ALL: [Tab; 3] = [Tab::Results, Tab::Log, Tab::Diagnostics];
+    const ALL: [Tab; 4] = [Tab::Results, Tab::Table, Tab::Log, Tab::Diagnostics];
 
     fn index(self) -> usize {
         Tab::ALL.iter().position(|&tab| tab == self).unwrap_or(0)
@@ -63,6 +67,11 @@ fn result_columns(raw: bool) -> Vec<ColumnSpec> {
         .iter()
         .map(|c| (c.title(raw), c.width(), false))
         .collect()
+}
+
+/// Width at 96 DPI of a Table column: enough for the heading, within limits.
+fn table_column_width(title: &str) -> i32 {
+    (title.chars().count() as i32 * 7 + 24).clamp(90, 220)
 }
 
 fn log_columns() -> Vec<ColumnSpec> {
@@ -84,6 +93,7 @@ fn diagnostic_columns() -> Vec<ColumnSpec> {
 pub struct BottomPanel {
     pub tabs: HWND,
     pub results: HWND,
+    pub table: HWND,
     pub log: HWND,
     pub diagnostics: HWND,
 }
@@ -126,6 +136,7 @@ impl BottomPanel {
             )
         };
         let results = list(id::RESULTS, false)?;
+        let table = list(id::TABLE, false)?;
         let log = list(id::LOG, false)?;
         let diagnostics = list(id::DIAGNOSTICS, true)?;
         let tabs = child(
@@ -138,7 +149,7 @@ impl BottomPanel {
         // returns.
         unsafe {
             let _ = ShowWindow(tabs, SW_SHOW);
-            for list in [results, log, diagnostics] {
+            for list in [results, table, log, diagnostics] {
                 // Keep the lists above the tab control; the tab control clips
                 // itself against them (WS_CLIPSIBLINGS), so it never paints
                 // over them.
@@ -160,7 +171,10 @@ impl BottomPanel {
                     extended as isize,
                 );
             }
-            for (index, title) in ["Results", "Log", "Diagnostics"].into_iter().enumerate() {
+            for (index, title) in ["Results", "Table", "Log", "Diagnostics"]
+                .into_iter()
+                .enumerate()
+            {
                 let mut text = wide(title);
                 let item = TCITEMW {
                     mask: TCIF_TEXT,
@@ -178,6 +192,7 @@ impl BottomPanel {
         let panel = BottomPanel {
             tabs,
             results,
+            table,
             log,
             diagnostics,
         };
@@ -188,9 +203,10 @@ impl BottomPanel {
         Ok(panel)
     }
 
-    fn lists(&self) -> [(Tab, HWND); 3] {
+    fn lists(&self) -> [(Tab, HWND); 4] {
         [
             (Tab::Results, self.results),
+            (Tab::Table, self.table),
             (Tab::Log, self.log),
             (Tab::Diagnostics, self.diagnostics),
         ]
@@ -218,8 +234,52 @@ impl BottomPanel {
         }
     }
 
+    /// Replace the Table columns with `headers`.
+    pub fn set_table_columns(&self, headers: &[String], dpi: u32) {
+        // SAFETY: plain list view messages. Deleting column 0 until it fails
+        // empties the header; a report list keeps working without columns.
+        unsafe { while send(self.table, LVM_DELETECOLUMN, 0, 0).0 != 0 {} }
+        let columns: Vec<(&str, i32, bool)> = headers
+            .iter()
+            .map(|title| (title.as_str(), table_column_width(title), false))
+            .collect();
+        add_columns(self.table, &columns, dpi);
+    }
+
+    /// Size each Table column to its widest cell on screen, but never
+    /// narrower than its heading needs, once the rows are in.
+    pub fn fit_table_columns(&self, headers: &[String], dpi: u32) {
+        for (index, title) in headers.iter().enumerate() {
+            // SAFETY: LVM_SETCOLUMNWIDTH takes a column index and a width,
+            // LVM_GETCOLUMNWIDTH a column index; LVSCW_AUTOSIZE measures the
+            // cells.
+            unsafe {
+                send(
+                    self.table,
+                    LVM_SETCOLUMNWIDTH,
+                    index,
+                    LVSCW_AUTOSIZE as isize,
+                );
+                let cells = send(self.table, LVM_GETCOLUMNWIDTH, index, 0).0 as i32;
+                let width = cells.max(dpi::scale(table_column_width(title), dpi));
+                send(self.table, LVM_SETCOLUMNWIDTH, index, width as isize);
+            }
+        }
+    }
+
     /// Set the column widths for a new DPI.
-    pub fn size_columns(&self, dpi: u32) {
+    pub fn size_columns(&self, dpi: u32, table_headers: &[String]) {
+        for (index, title) in table_headers.iter().enumerate() {
+            // SAFETY: LVM_SETCOLUMNWIDTH takes a column index and a width.
+            unsafe {
+                send(
+                    self.table,
+                    LVM_SETCOLUMNWIDTH,
+                    index,
+                    dpi::scale(table_column_width(title), dpi) as isize,
+                );
+            }
+        }
         for (list, columns) in [
             (self.results, result_columns(false)),
             (self.log, log_columns()),
@@ -330,7 +390,7 @@ impl BottomPanel {
     }
 }
 
-fn add_columns(list: HWND, columns: &[ColumnSpec], dpi: u32) {
+fn add_columns(list: HWND, columns: &[(&str, i32, bool)], dpi: u32) {
     for (index, &(title, width, right)) in columns.iter().enumerate() {
         let mut text = wide(title);
         let header = LVCOLUMNW {

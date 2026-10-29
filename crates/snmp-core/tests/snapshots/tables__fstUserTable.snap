@@ -1,0 +1,9 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"fstUserTable\", &[\"fstUserTable\"])"
+---
+FEROSNMP-TEST-MIB::fstUserTable INDEX { IMPLIED fstUserName [ImpliedOctets] }
+fstUserName  fstUserGroup  fstUserLogins
+admin        wheel         12
+guest        users         0
+operator     ops           7

@@ -8,7 +8,9 @@
 //! - [`icons`]: the small pictures in the tree, one per kind of node.
 //! - [`settings_dialog`]: the Settings dialog.
 //! - [`agents_dialog`]: the Agents dialog, for saved agents.
-//! - [`bottom_panel`]: the Results, Log and Diagnostics tabs along the bottom.
+//! - [`set_dialog`]: the Set value dialog.
+//! - [`bottom_panel`]: the Results, Table, Log and Diagnostics tabs along the
+//!   bottom.
 //! - [`text_window`]: the source viewer and the "Why this symbol?" report.
 //!
 //! All windows belong to the one UI thread that runs [`run`]. MIBs are loaded
@@ -22,6 +24,7 @@ mod credentials;
 mod details;
 mod icons;
 mod main_window;
+mod set_dialog;
 mod settings_dialog;
 mod text_window;
 mod toolbar;
@@ -35,7 +38,7 @@ use windows::Win32::UI::Controls::{
     ICC_BAR_CLASSES, ICC_COOL_CLASSES, ICC_LISTVIEW_CLASSES, ICC_STANDARD_CLASSES,
     ICC_TREEVIEW_CLASSES, INITCOMMONCONTROLSEX, InitCommonControlsEx,
 };
-use windows::Win32::UI::Input::KeyboardAndMouse::{VK_F3, VK_F5};
+use windows::Win32::UI::Input::KeyboardAndMouse::{VK_F2, VK_F3, VK_F5};
 use windows::Win32::UI::WindowsAndMessaging::{
     ACCEL, CreateAcceleratorTableW, DispatchMessageW, FCONTROL, FSHIFT, FVIRTKEY, GetMessageW,
     IsDialogMessageW, MB_ICONERROR, MB_OK, MSG, MessageBoxW, SendMessageW, TranslateAcceleratorW,
@@ -83,6 +86,8 @@ pub mod id {
     pub const OBJECT: u16 = 112;
     /// The toolbar with the query buttons.
     pub const QUERY_TOOLBAR: u16 = 113;
+    /// The Table list.
+    pub const TABLE: u16 = 114;
 
     /// Enter, from the dialog keyboard handling (the predefined `IDOK`).
     pub const ENTER: u16 = 1;
@@ -124,16 +129,25 @@ pub mod id {
     pub const REPEAT: u16 = 234;
     /// Query > Cancel (Esc, also a toolbar button).
     pub const CANCEL: u16 = 235;
+    /// Query > Table (Ctrl+T, also a toolbar button).
+    pub const TABLE_QUERY: u16 = 236;
+    /// Query > Set value (F2, also a toolbar button and in the context
+    /// menus of the Results and Table lists).
+    pub const SET_VALUE: u16 = 237;
     /// View > Raw values (Ctrl+Shift+R, also a toolbar button).
     pub const RAW: u16 = 240;
-    /// Context menu of the Results list: copy the cell under the mouse.
+    /// Context menu of the Results and Table lists: copy the cell under the
+    /// mouse.
     pub const COPY_CELL: u16 = 250;
-    /// Context menu of the Results list: copy the numeric OIDs.
+    /// Context menu of the Results and Table lists: copy the numeric OIDs.
     pub const COPY_OID: u16 = 251;
-    /// Context menu of the Results list: show the object in the MIB tree.
+    /// Context menu of the Results and Table lists: show the object in the
+    /// MIB tree.
     pub const SHOW_IN_TREE: u16 = 252;
     /// Context menu of the Results list: forget the results.
     pub const CLEAR_RESULTS: u16 = 253;
+    /// Context menu of the Table list: forget the table.
+    pub const CLEAR_TABLE: u16 = 254;
     /// Help > About.
     pub const ABOUT: u16 = 220;
 }
@@ -177,6 +191,8 @@ fn message_loop(main: HWND) {
         accelerator(FVIRTKEY, VK_F3.0, id::FIND_NEXT),
         accelerator(FSHIFT, VK_F3.0, id::FIND_PREVIOUS),
         accelerator(FVIRTKEY, VK_F5.0, id::REPEAT),
+        accelerator(FVIRTKEY, VK_F2.0, id::SET_VALUE),
+        accelerator(FCONTROL, u16::from(b'T'), id::TABLE_QUERY),
         accelerator(FCONTROL, u16::from(b'R'), id::RELOAD),
         accelerator(FCONTROL | FSHIFT, u16::from(b'R'), id::RAW),
         accelerator(FCONTROL, u16::from(b'C'), id::COPY),
@@ -190,7 +206,7 @@ fn message_loop(main: HWND) {
         let mut msg = MSG::default();
         // GetMessageW returns 0 for WM_QUIT and -1 on error; stop on both.
         while GetMessageW(&mut msg, None, 0, 0).0 > 0 {
-            // Keyboard shortcuts first (Ctrl+F, F3, F5, Ctrl+C) ...
+            // Keyboard shortcuts first (Ctrl+F, F3, F5, Ctrl+C, ...) ...
             if let Some(table) = table
                 && TranslateAcceleratorW(main, table, &msg) != 0
             {

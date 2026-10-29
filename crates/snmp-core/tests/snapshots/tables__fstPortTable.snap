@@ -1,0 +1,10 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"fstPortTable\", &[\"fstPortTable\"])"
+---
+FEROSNMP-TEST-MIB::fstPortTable INDEX { fstPortSlot [Integer], fstPortAddress [IpAddress], fstPortName [Octets] }
+fstPortSlot  fstPortAddress  fstPortName  fstPortMac         fstPortSpeed  fstPortStatus
+1            192.0.2.1       eth0         00:1b:21:0a:ff:01  1000 Mbit/s   up(1)
+1            192.0.2.1       eth1         00:1b:21:0a:ff:02  100 Mbit/s    down(2)
+2            198.51.100.7    mgmt         00:1b:21:0a:ff:03  10 Mbit/s     up(1)
+16           10.0.0.1                     02:00:00:00:00:10  0 Mbit/s      down(2)

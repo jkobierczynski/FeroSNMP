@@ -1,0 +1,10 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"fstPortXTable\", &[\"fstPortXTable\"])"
+---
+FEROSNMP-TEST-MIB::fstPortXTable INDEX { fstPortSlot [Integer], fstPortAddress [IpAddress], fstPortName [Octets] } (AUGMENTS fstPortEntry)
+fstPortSlot  fstPortAddress  fstPortName  fstPortAlias  fstPortErrors
+1            192.0.2.1       eth0         uplink        0
+1            192.0.2.1       eth1                       17
+2            198.51.100.7    mgmt         management    3
+16           10.0.0.1                     no name       0

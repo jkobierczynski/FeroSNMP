@@ -10,6 +10,10 @@
 //!   with file, line and column.
 //! - `ferosnmp get|next|bulk <agent> <objects>...` and
 //!   `ferosnmp walk <agent> [<root>]`: ask an SNMP agent (v1, v2c or v3).
+//! - `ferosnmp table <agent> <table>`: walk a table and print it as rows
+//!   and columns, with the INDEX split into columns.
+//! - `ferosnmp set <agent> <object> <value>...`: write values, built from
+//!   the MIB type and checked against the MIB first.
 //! - `ferosnmp discover <agent>`: an SNMPv3 agent's engine ID, boots and
 //!   time.
 //!
@@ -18,9 +22,11 @@
 //! - 0: success, or no problems found;
 //! - 1: nothing found (`mib show`, `mib search`), a name does not resolve
 //!   (`mib why`), `lint` found problems, or the agent answered with an
-//!   error or with "no such object" (`get`, `next`, `bulk`, `walk`);
+//!   error or with "no such object" (`get`, `next`, `bulk`, `walk`, `set`),
+//!   or a table has no rows or a row whose instance does not fit its
+//!   INDEX (`table`);
 //! - 2: the command could not run (bad arguments, unreadable files, no
-//!   response from the agent).
+//!   response from the agent, a SET value the MIB does not allow).
 
 #![forbid(unsafe_code)]
 
@@ -38,7 +44,7 @@ use clap::{Parser, Subcommand};
 use mib_core::Strictness;
 
 use crate::lint::{FailOn, Format};
-use crate::query::{Query, QueryArgs};
+use crate::query::{Query, QueryArgs, TableFormat};
 use crate::sources::MibSources;
 
 /// FeroSNMP: browse SNMP MIBs, check MIB files for problems and query SNMP
@@ -151,6 +157,63 @@ enum Command {
         /// Use GETNEXT also with SNMPv2c, for agents with a broken GETBULK.
         #[arg(long)]
         no_bulk: bool,
+    },
+
+    /// Walk a table and print it as rows and columns, with the instance of
+    /// each row split into its INDEX values.
+    ///
+    /// Example: ferosnmp table 192.0.2.1 ifTable
+    Table {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// The table, its row or one of its columns: `ifTable`,
+        /// `IF-MIB::ifXTable`.
+        #[arg(value_name = "TABLE")]
+        table: String,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t = TableFormat::Text)]
+        format: TableFormat,
+
+        /// Instances per GETBULK request.
+        #[arg(long, default_value_t = snmp_core::DEFAULT_MAX_REPETITIONS, value_name = "N")]
+        max_repetitions: u32,
+
+        /// Use GETNEXT also with SNMPv2c, for agents with a broken GETBULK.
+        #[arg(long)]
+        no_bulk: bool,
+    },
+
+    /// Write values (SET). Each value is read with the object's MIB type
+    /// and checked against the MIB (access, enumeration, range, size)
+    /// before anything is sent; all values go in one request, so the agent
+    /// sets all of them or none.
+    ///
+    /// Values are written as the tool shows them: `up` or `1` for an
+    /// enumeration, `00:1b:21:0a:ff:09` for a MAC address, `alpha gamma`
+    /// for BITS, a name or numeric OID for an OBJECT IDENTIFIER.
+    ///
+    /// Example: ferosnmp set 192.0.2.1 -c private sysContact.0 "Jurgen" ifAdminStatus.3 down
+    Set {
+        #[command(flatten)]
+        query: QueryArgs,
+
+        /// Pairs of an instance and its value: `sysContact.0 "Jurgen"`.
+        #[arg(required = true, num_args = 2.., allow_negative_numbers = true, value_names = ["OBJECT", "VALUE"])]
+        pairs: Vec<String>,
+
+        /// Read every value as this type instead of the MIB's: i (INTEGER),
+        /// u (Unsigned32), c (Counter32), C (Counter64), t (TimeTicks),
+        /// a (IpAddress), o (OBJECT IDENTIFIER), s (text), x (hex bytes) or
+        /// b (BITS). Needed for objects no loaded MIB defines.
+        #[arg(long = "type", value_name = "TYPE", value_parser = parse_value_type)]
+        value_type: Option<snmp_core::ValueType>,
+
+        /// Send even when the MIB says the object is read-only or does not
+        /// allow the value (to test how an agent reacts).
+        #[arg(long)]
+        force: bool,
     },
 
     /// Show an SNMPv3 agent's engine ID, boots and time.
@@ -336,8 +399,54 @@ fn run(command: Command, out: &mut impl Write) -> Result<Status, CliError> {
             },
             out,
         ),
+        Command::Table {
+            query,
+            table,
+            format,
+            max_repetitions,
+            no_bulk,
+        } => query::run(
+            &query,
+            Query::Table {
+                table,
+                max_repetitions,
+                bulk: !no_bulk,
+                format,
+            },
+            out,
+        ),
+        Command::Set {
+            query,
+            pairs,
+            value_type,
+            force,
+        } => {
+            if pairs.len() % 2 != 0 {
+                return Err(CliError::Message(format!(
+                    "{} has no value: give pairs of an object and its value",
+                    pairs.last().map(String::as_str).unwrap_or_default()
+                )));
+            }
+            let pairs = pairs
+                .chunks(2)
+                .map(|pair| (pair[0].clone(), pair[1].clone()))
+                .collect();
+            query::run(
+                &query,
+                Query::Set {
+                    pairs,
+                    value_type,
+                    force,
+                },
+                out,
+            )
+        }
         Command::Discover { query } => query::run(&query, Query::Discover, out),
     }
+}
+
+fn parse_value_type(text: &str) -> Result<snmp_core::ValueType, String> {
+    text.parse()
 }
 
 #[cfg(test)]

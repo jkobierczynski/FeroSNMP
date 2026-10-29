@@ -1,0 +1,10 @@
+---
+source: crates/snmp-core/tests/tables.rs
+expression: "render(&mibs, \"IF-MIB::ifXTable\", &[\"ifXTable\"])"
+---
+IF-MIB::ifXTable INDEX { ifIndex [Integer] } (AUGMENTS ifEntry)
+ifIndex  ifName  ifInMulticastPkts  ifInBroadcastPkts  ifOutMulticastPkts  ifOutBroadcastPkts  ifHCInOctets  ifHCInUcastPkts  ifHCInMulticastPkts  ifHCInBroadcastPkts  ifHCOutOctets  ifHCOutUcastPkts  ifHCOutMulticastPkts  ifHCOutBroadcastPkts  ifLinkUpDownTrapEnable  ifHighSpeed  ifPromiscuousMode  ifConnectorPresent  ifAlias  ifCounterDiscontinuityTime
+1        lo      0                  0                  0                   0                   142657288     9152             0                    0                    142657288      9152              0                     0                                             10           false(2)           false(2)                     (0) 0:00:00.00
+2        ifb0    0                  0                  0                   0                   0             0                0                    0                    0              0                 0                     0                                             0            false(2)           true(1)                      (0) 0:00:00.00
+3        ifb1    0                  0                  0                   0                   0             0                0                    0                    0              0                 0                     0                                             0            false(2)           true(1)                      (0) 0:00:00.00
+4        eth0    0                  0                  0                   0                   193049183     34244            0                    0                    16520864       26223             0                     0                                             0            false(2)           true(1)                      (0) 0:00:00.00

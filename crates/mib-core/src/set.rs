@@ -14,6 +14,7 @@ use crate::library::Strictness;
 use crate::oid::Oid;
 use crate::pattern::Pattern;
 use crate::source::SourceView;
+use crate::table::{IndexColumn, IndexEncoding, Table, TableColumn};
 use crate::trace::{self, SymbolTrace, TraceError};
 
 /// Every module loaded from a [`MibLibrary`](crate::MibLibrary), merged into
@@ -234,6 +235,96 @@ impl MibSet {
         matches
     }
 
+    /// The table that a table, row or column node belongs to: its row, its
+    /// INDEX (from the augmented row for a row that uses `AUGMENTS`) and its
+    /// columns. `None` for anything else.
+    ///
+    /// ```
+    /// let text = r#"
+    /// EX-MIB DEFINITIONS ::= BEGIN
+    /// IMPORTS OBJECT-TYPE, Integer32, enterprises FROM SNMPv2-SMI
+    ///         DisplayString FROM SNMPv2-TC;
+    /// exTable OBJECT-TYPE SYNTAX SEQUENCE OF ExEntry MAX-ACCESS not-accessible
+    ///     STATUS current DESCRIPTION "" ::= { enterprises 99999 1 }
+    /// exEntry OBJECT-TYPE SYNTAX ExEntry MAX-ACCESS not-accessible
+    ///     STATUS current DESCRIPTION "" INDEX { exSlot, IMPLIED exName } ::= { exTable 1 }
+    /// ExEntry ::= SEQUENCE { exSlot Integer32, exName DisplayString, exValue Integer32 }
+    /// exSlot OBJECT-TYPE SYNTAX Integer32 (1..16) MAX-ACCESS not-accessible
+    ///     STATUS current DESCRIPTION "" ::= { exEntry 1 }
+    /// exName OBJECT-TYPE SYNTAX DisplayString (SIZE (1..32)) MAX-ACCESS not-accessible
+    ///     STATUS current DESCRIPTION "" ::= { exEntry 2 }
+    /// exValue OBJECT-TYPE SYNTAX Integer32 MAX-ACCESS read-only
+    ///     STATUS current DESCRIPTION "" ::= { exEntry 3 }
+    /// END
+    /// "#;
+    /// use mib_core::{IndexEncoding, IndexValue};
+    ///
+    /// let set = mib_core::load_module_text("EX-MIB", text, mib_core::Strictness::Permissive)?;
+    /// let table = set.table(set.find("exValue").unwrap()).expect("a column");
+    /// assert_eq!(table.name, "exTable");
+    /// assert_eq!(table.index[1].encoding, IndexEncoding::ImpliedOctets);
+    ///
+    /// // exValue.3."eth" -> slot 3, name "eth"
+    /// let oid = table.columns[2].oid.child(3).child(101).child(116).child(104);
+    /// let (column, suffix) = table.split(&oid).unwrap();
+    /// assert_eq!(table.columns[column].name, "exValue");
+    /// assert_eq!(
+    ///     table.decode_index(suffix)?,
+    ///     [IndexValue::Integer(3), IndexValue::Octets(b"eth".to_vec())]
+    /// );
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn table(&self, node: Node<'_>) -> Option<Table> {
+        let object = node.inner.object()?;
+        let table = object.table()?;
+        let row = object.row()?;
+        let (table_node, row_node) = (table.node()?, row.node()?);
+        let index = row
+            .effective_indexes()
+            .map(|index| {
+                let object = index.object();
+                let syntax = match object {
+                    Some(object) => syntax(object),
+                    None => index.ty().map(type_syntax),
+                };
+                let implied = index.implied();
+                IndexColumn {
+                    name: index.name().to_string(),
+                    module: object
+                        .and_then(|object| object.module())
+                        .map(|module| module.name().to_string()),
+                    implied,
+                    encoding: IndexEncoding::for_syntax(syntax.as_ref(), implied),
+                    syntax,
+                }
+            })
+            .collect();
+        let mut columns: Vec<TableColumn> = row
+            .columns()
+            .filter_map(|column| {
+                let node = column.node()?;
+                Some(TableColumn {
+                    name: column.name().to_string(),
+                    arc: node.arc(),
+                    oid: convert::oid(node.oid()),
+                    access: Some(convert::access(column.access())),
+                    syntax: syntax(column),
+                })
+            })
+            .collect();
+        columns.sort_by_key(|column| column.arc);
+        Some(Table {
+            name: table.name().to_string(),
+            module: table.module().map(|module| module.name().to_string()),
+            oid: convert::oid(table_node.oid()),
+            row: row.name().to_string(),
+            row_oid: convert::oid(row_node.oid()),
+            augments: row.augments().map(|augmented| augmented.name().to_string()),
+            index,
+            columns,
+        })
+    }
+
     /// Format an OID for display as `MODULE::name.suffix`, such as
     /// `IF-MIB::ifDescr.7`. Falls back to the numeric form when no node
     /// matches.
@@ -268,7 +359,7 @@ pub struct NodeId(mib_rs::raw::NodeId);
 /// summary, or [`Node::id`] to remember a node and find it again later.
 #[derive(Clone, Copy)]
 pub struct Node<'a> {
-    inner: m::Node<'a>,
+    pub(crate) inner: m::Node<'a>,
 }
 
 impl<'a> Node<'a> {
@@ -428,6 +519,32 @@ fn syntax(object: m::Object<'_>) -> Option<Syntax> {
         ranges: convert::ranges(object.effective_ranges()),
         sizes: convert::ranges(object.effective_sizes()),
     })
+}
+
+/// The syntax of an INDEX that names a type instead of an object, as SMIv1
+/// allows (`INDEX { INTEGER }`).
+fn type_syntax(ty: m::Type<'_>) -> Syntax {
+    let mut type_chain = Vec::new();
+    let mut next = Some(ty);
+    while let Some(ty) = next {
+        if !ty.name().is_empty() {
+            type_chain.push(ty.name().to_string());
+        }
+        next = ty.parent();
+    }
+    let base_type = convert::base_type(ty.effective_base());
+    if !type_chain.iter().any(|name| name == base_type.as_str()) {
+        type_chain.push(base_type.as_str().to_string());
+    }
+    Syntax {
+        type_chain,
+        base_type,
+        display_hint: non_empty(ty.effective_display_hint()),
+        enums: convert::named_numbers(ty.effective_enums()),
+        bits: convert::named_numbers(ty.effective_bits()),
+        ranges: convert::ranges(ty.effective_ranges()),
+        sizes: convert::ranges(ty.effective_sizes()),
+    }
 }
 
 fn non_empty(text: &str) -> Option<String> {

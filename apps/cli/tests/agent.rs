@@ -1,4 +1,5 @@
-//! Golden-file tests of `get`, `next`, `bulk` and `walk` against a real
+//! Golden-file tests of `get`, `next`, `bulk`, `walk`, `table` and `set`
+//! against a real
 //! net-snmp agent serving fixed values (see
 //! `crates/snmp-core/tests/agent/`).
 //!
@@ -139,7 +140,16 @@ fn get_next_and_bulk() {
         ],
     );
     // Nothing follows the last table cell: endOfMibView, and exit code 1.
-    let next = query("next", &agent, &["fstString.0", "fstTable", "fstCount.150"]);
+    let next = query(
+        "next",
+        &agent,
+        &[
+            "fstString.0",
+            "fstTable",
+            "fstCount.150",
+            "fstPolicyHits.2.0.0",
+        ],
+    );
     assert_eq!(next.code, 1);
     let next = next.stdout;
     let bulk = ok(
@@ -374,4 +384,116 @@ fn snmpv3_failures_are_explained() {
     );
     assert!(message.contains("authorizationError"), "{message}");
     assert!(message.contains("hint: "), "{message}");
+}
+
+#[test]
+fn tables() {
+    let Some(agent) = agent() else { return };
+    let mut output = String::new();
+    for table in [
+        "fstPortTable",
+        "fstPortXTable",
+        "fstUserTable",
+        "fstPolicyTable",
+    ] {
+        output.push_str(&ok("table", &agent, &[table]));
+        output.push_str("--\n");
+    }
+    // SNMPv1 with GETNEXT gives the same table, apart from the Counter64
+    // column, which SNMPv1 cannot carry.
+    assert_eq!(
+        ok("table", &agent, &["fstPortTable", "-v", "1"]),
+        ok("table", &agent, &["fstPortTable"])
+    );
+    // A column name finds its table too.
+    assert_eq!(
+        ok("table", &agent, &["fstUserGroup"]),
+        ok("table", &agent, &["fstUserTable"])
+    );
+    output.push_str(&ok("table", &agent, &["fstPortTable", "--format", "csv"]));
+    insta::assert_snapshot!("tables", output);
+
+    // Not a table.
+    let run = query("table", &agent, &["fstString"]);
+    assert_eq!(run.code, 2);
+    assert!(
+        run.stderr.contains("is a scalar, not a table"),
+        "{}",
+        run.stderr
+    );
+}
+
+/// `ferosnmp set` with the community that may write fstSettings.
+fn set(agent: &str, args: &[&str]) -> Run {
+    let mut all = args.to_vec();
+    all.extend(["-c", "private"]);
+    query("set", agent, &all)
+}
+
+#[test]
+fn set_values() {
+    let Some(agent) = agent() else { return };
+    // Every type, in one request; the response shows what was set.
+    let values = [
+        ("fstContact.0", "FeroSNMP tests"),
+        ("fstMode.0", "auto"),
+        ("fstLimit.0", "75"),
+        ("fstGateway.0", "192.0.2.10"),
+        ("fstMacAddress.0", "00:1b:21:0a:ff:0a"),
+        ("fstOptions.0", "alpha delta"),
+        ("fstTarget.0", "fstTable"),
+        ("fstThreshold.0", "999"),
+    ];
+    let args: Vec<&str> = values.iter().flat_map(|(o, v)| [*o, *v]).collect();
+    let run = set(&agent, &args);
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    let objects: Vec<&str> = values.iter().map(|(o, _)| *o).collect();
+    let mut get_args = objects.clone();
+    get_args.extend(["-c", "private"]);
+    // Reading back gives what was set.
+    assert_eq!(ok("get", &agent, &get_args), run.stdout);
+    let mut output = run.stdout;
+
+    // SNMPv3, by the user that may write.
+    let v3 = [
+        "-u",
+        "v3-writer",
+        "-a",
+        "SHA-256",
+        "-A",
+        "ferosnmp-auth",
+        "-X",
+        "ferosnmp-priv",
+    ];
+    let mut args = v3.to_vec();
+    args.extend(["fstMode.0", "on", "fstLimit.0", "-0"]);
+    output.push_str(&ok("set", &agent, &args));
+    output.push_str("--\n");
+
+    // Checked against the MIB before sending: nothing is sent.
+    for (object, value) in [
+        ("fstMode.0", "maybe"),
+        ("fstLimit.0", "101"),
+        ("fstContact.0", "a contact name that is longer than 32"),
+        ("fstMacAddress.0", "00:1b"),
+        ("fstOptions.0", "epsilon"),
+        ("fstStatus.0", "up"),
+    ] {
+        let run = set(&agent, &[object, value]);
+        assert_eq!(run.code, 2, "{object} {value}");
+        output.push_str(&run.stderr);
+    }
+    output.push_str("--\n");
+
+    // Sent anyway: the agent says no.
+    for (object, value) in [("fstLimit.0", "101"), ("fstStatus.0", "up")] {
+        let run = set(&agent, &[object, value, "--force"]);
+        assert_eq!(run.code, 1, "{object} {value}");
+        output.push_str(&run.stderr);
+    }
+    // A community that may only read.
+    let run = query("set", &agent, &["fstLimit.0", "10"]);
+    assert_eq!(run.code, 1);
+    output.push_str(&run.stderr);
+    insta::assert_snapshot!("set", output.replace(&agent, "AGENT"));
 }

@@ -23,7 +23,9 @@ mod query;
 mod results;
 mod rich_text;
 mod secrets;
+mod set_value;
 mod settings;
+mod table;
 mod targets;
 #[cfg(test)]
 mod test_support;

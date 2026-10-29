@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! [Reload] [Settings]  Search [__________________________]
-//! Agent [lab switch  v]  Object [IF-MIB::ifTable______]  [Get] [Next] [Bulk] [Walk] [Cancel] [Agents...] [Raw]
+//! Agent [lab switch  v]  Object [IF-MIB::ifTable______]  [Get] [Next] [Bulk] [Walk] [Table] [Set...] [Cancel] [Agents...] [Raw]
 //! ```
 //!
 //! A rebar is the strip of movable "bands" at the top of classic Windows
@@ -47,7 +47,8 @@ pub struct Toolbar {
     pub agent: HWND,
     /// The Object box: what to query, such as `sysDescr.0`.
     pub object: HWND,
-    /// The toolbar with Get, Next, Bulk, Walk, Cancel, Agents and Raw.
+    /// The toolbar with Get, Next, Bulk, Walk, Table, Set, Cancel, Agents
+    /// and Raw.
     pub queries: HWND,
 }
 
@@ -309,22 +310,27 @@ impl Toolbar {
                 wide("Next"),
                 wide("Bulk"),
                 wide("Walk"),
+                wide("Table"),
+                wide("Set\u{2026}"),
                 wide("Cancel"),
                 wide("Agents\u{2026}"),
                 wide("Raw"),
             ];
-            let mut cancel = button(id::CANCEL, &labels[4]);
+            let mut cancel = button(id::CANCEL, &labels[6]);
             cancel.fsState = 0; // disabled until a query runs
-            let mut raw = button(id::RAW, &labels[6]);
+            let mut raw = button(id::RAW, &labels[8]);
             raw.fsStyle |= BTNS_CHECK as u8;
             let buttons = [
                 button(id::GET, &labels[0]),
                 button(id::NEXT, &labels[1]),
                 button(id::BULK, &labels[2]),
                 button(id::WALK, &labels[3]),
+                button(id::TABLE_QUERY, &labels[4]),
+                separator(),
+                button(id::SET_VALUE, &labels[5]),
                 cancel,
                 separator(),
-                button(id::AGENTS, &labels[5]),
+                button(id::AGENTS, &labels[7]),
                 raw,
             ];
             SendMessageW(

@@ -1,0 +1,30 @@
+---
+source: apps/cli/tests/agent.rs
+expression: output
+---
+fstPortSlot  fstPortAddress  fstPortName  fstPortMac         fstPortSpeed  fstPortStatus
+1            192.0.2.1       eth0         00:1b:21:0a:ff:01  1000 Mbit/s   up(1)
+1            192.0.2.1       eth1         00:1b:21:0a:ff:02  100 Mbit/s    down(2)
+2            198.51.100.7    mgmt         00:1b:21:0a:ff:03  10 Mbit/s     up(1)
+16           10.0.0.1                     02:00:00:00:00:10  0 Mbit/s      down(2)
+--
+fstPortSlot  fstPortAddress  fstPortName  fstPortAlias  fstPortErrors
+1            192.0.2.1       eth0         uplink        0
+1            192.0.2.1       eth1                       17
+2            198.51.100.7    mgmt         management    3
+16           10.0.0.1                     no name       0
+--
+fstUserName  fstUserGroup  fstUserLogins
+admin        wheel         12
+guest        users         0
+operator     ops           7
+--
+fstPolicyFamily  fstPolicyId                        fstPolicyHits
+ipv4(1)          FEROSNMP-TEST-MIB::fstPolicyTable  5
+ipv6(2)          SNMPv2-SMI::zeroDotZero            1099511627776
+--
+fstPortSlot,fstPortAddress,fstPortName,fstPortMac,fstPortSpeed,fstPortStatus
+1,192.0.2.1,eth0,00:1b:21:0a:ff:01,1000 Mbit/s,up(1)
+1,192.0.2.1,eth1,00:1b:21:0a:ff:02,100 Mbit/s,down(2)
+2,198.51.100.7,mgmt,00:1b:21:0a:ff:03,10 Mbit/s,up(1)
+16,10.0.0.1,,02:00:00:00:00:10,0 Mbit/s,down(2)

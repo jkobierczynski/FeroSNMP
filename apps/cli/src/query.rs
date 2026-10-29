@@ -1,13 +1,15 @@
-//! The `get`, `next`, `bulk` and `walk` commands: ask an SNMP agent.
+//! The `get`, `next`, `bulk`, `walk`, `table`, `set` and `discover`
+//! commands: ask an SNMP agent.
 
 use std::io::Write;
 use std::time::Duration;
 
 use clap::{Args, ValueEnum};
-use mib_core::{MibSet, Oid, Strictness};
+use mib_core::{MibSet, NodeKind, Oid, Strictness, Table};
 use snmp_core::{
     AuthProtocol, Engine, EngineConfig, Error, Event, Formatter, ObjectError, Operation,
-    PrivProtocol, SecurityLevel, Target, Usm, Version, hex, parse_hex, raw_line, uptime_text,
+    PrivProtocol, SecurityLevel, TableView, Target, Usm, ValueInput, ValueType, Version, hex,
+    parse_hex, raw_line, uptime_text,
 };
 
 use crate::sources::MibSources;
@@ -187,14 +189,42 @@ pub enum Query {
         max_repetitions: u32,
         bulk: bool,
     },
+    /// A walk of a table, printed as rows and columns.
+    Table {
+        table: String,
+        max_repetitions: u32,
+        bulk: bool,
+        format: TableFormat,
+    },
+    /// SET: objects and their values as typed.
+    Set {
+        pairs: Vec<(String, String)>,
+        value_type: Option<ValueType>,
+        force: bool,
+    },
     /// SNMPv3 engine discovery.
     Discover,
+}
+
+/// How `table` prints the table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum TableFormat {
+    /// Aligned columns.
+    Text,
+    /// Comma-separated values, for spreadsheets.
+    Csv,
 }
 
 /// Run a query command and print its results as they arrive.
 pub fn run(args: &QueryArgs, query: Query, out: &mut impl Write) -> Result<Status, CliError> {
     let mibs = args.sources.load_with(Strictness::Permissive)?;
     let discover = matches!(query, Query::Discover);
+    let mut table = match &query {
+        Query::Table { table, format, .. } => {
+            Some((TableView::new(find_table(&mibs, table)?), *format))
+        }
+        _ => None,
+    };
     let operation = operation(&mibs, query)?;
     let version = match args.version {
         Some(version) => version,
@@ -231,6 +261,10 @@ pub fn run(args: &QueryArgs, query: Query, out: &mut impl Write) -> Result<Statu
         while let Some(event) = running.next_event().await {
             match event {
                 Event::Varbinds(varbinds) => {
+                    if let Some((view, _)) = &mut table {
+                        view.extend(varbinds);
+                        continue;
+                    }
                     for varbind in &varbinds {
                         if varbind.value.is_exception() {
                             status = Status::Problems;
@@ -266,6 +300,9 @@ pub fn run(args: &QueryArgs, query: Query, out: &mut impl Write) -> Result<Statu
                     }
                 }
                 Event::Finished(summary) => {
+                    if let Some((view, format)) = &table {
+                        status = print_table(view, *format, &mut formatter, out)?;
+                    }
                     if args.log {
                         eprintln!(
                             "ferosnmp: done: {} varbind{}, {} request{}, {:.1} ms",
@@ -324,8 +361,87 @@ fn operation(mibs: &MibSet, query: Query) -> Result<Operation, CliError> {
             max_repetitions,
             bulk,
         },
+        Query::Table {
+            table,
+            max_repetitions,
+            bulk,
+            ..
+        } => Operation::Walk {
+            root: find_table(mibs, &table)?.row_oid,
+            max_repetitions,
+            bulk,
+        },
+        Query::Set {
+            pairs,
+            value_type,
+            force,
+        } => {
+            let mut varbinds = Vec::with_capacity(pairs.len());
+            for (object, text) in &pairs {
+                let input = ValueInput::new(Some(mibs), resolve_object(mibs, object)?);
+                let varbind = input.build(text, value_type, !force).map_err(|error| {
+                    let mut message = error.to_string();
+                    if error.can_force() {
+                        message.push_str("\nferosnmp: hint: use --force to send it anyway");
+                    } else if let Some(allowed) = input.allowed() {
+                        message.push_str(&format!("\nferosnmp: hint: allowed: {allowed}"));
+                    }
+                    CliError::Message(message)
+                })?;
+                varbinds.push(varbind);
+            }
+            Operation::Set(varbinds)
+        }
         Query::Discover => Operation::Discover,
     })
+}
+
+/// The table for a table, row or column name.
+fn find_table(mibs: &MibSet, text: &str) -> Result<Table, CliError> {
+    let oid = resolve_object(mibs, text)?;
+    let node = mibs.node_at(&oid).ok_or_else(|| {
+        CliError::Message(format!(
+            "{text} is not a table: give the name of a table, such as ifTable"
+        ))
+    })?;
+    match node.kind() {
+        NodeKind::Table | NodeKind::Row | NodeKind::Column => mibs.table(node).ok_or_else(|| {
+            CliError::Message(format!("the MIB does not define the rows of {text}"))
+        }),
+        kind => Err(CliError::Message(format!(
+            "{} is a {kind}, not a table: give the name of a table, such as ifTable",
+            node.qualified_name()
+        ))),
+    }
+}
+
+/// Print a table; `Problems` when it has no rows or a row whose instance
+/// does not fit the INDEX.
+fn print_table(
+    view: &TableView,
+    format: TableFormat,
+    formatter: &mut Formatter<'_>,
+    out: &mut impl Write,
+) -> Result<Status, CliError> {
+    match format {
+        TableFormat::Text => write!(out, "{}", view.text(formatter))?,
+        TableFormat::Csv => write!(out, "{}", view.csv(formatter))?,
+    }
+    let table = view.table();
+    if view.rows().is_empty() {
+        eprintln!("ferosnmp: {} has no rows on this agent", table.name);
+        return Ok(Status::Problems);
+    }
+    if view.index_errors().next().is_some() {
+        if format == TableFormat::Csv {
+            for (row, error) in view.index_errors() {
+                let suffix: String = row.suffix.iter().map(|a| format!(".{a}")).collect();
+                eprintln!("ferosnmp: row ?{suffix}: {error}");
+            }
+        }
+        return Ok(Status::Problems);
+    }
+    Ok(Status::Success)
 }
 
 /// The OID for what the user typed; see [`snmp_core::resolve_object`].

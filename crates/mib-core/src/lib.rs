@@ -16,6 +16,9 @@
 //! - A [`Node`] is one point in the OID tree. [`Node::details`] returns
 //!   everything a details pane shows: OID, module, kind, type chain, access,
 //!   status, units, enums, ranges and INDEX.
+//! - [`MibSet::table`] describes a table: its columns and its INDEX, with
+//!   the codec ([`decode_index`]) that splits an instance suffix into index
+//!   values, including multi-part, `AUGMENTS` and `IMPLIED` indexes.
 //! - [`MibSet::search`] finds nodes by name with `*` and `?` wildcards.
 //! - Problems in the MIB files are collected as [`Diagnostic`]s with file,
 //!   line and column instead of stopping the load, most with a concrete fix
@@ -56,6 +59,7 @@ mod oid;
 mod pattern;
 mod set;
 mod source;
+mod table;
 mod trace;
 
 pub use details::{
@@ -69,6 +73,10 @@ pub use oid::{Oid, ParseOidError};
 pub use pattern::Pattern;
 pub use set::{InstanceLookup, MibSet, ModuleInfo, Node, NodeId, SmiVersion};
 pub use source::{SourceView, Token, TokenClass};
+pub use table::{
+    IndexColumn, IndexEncoding, IndexError, IndexValue, Table, TableColumn, decode_index,
+    encode_index,
+};
 pub use trace::{
     LookupKind, ResolvedBy, SymbolTrace, TraceDefinition, TraceError, TraceImport, TraceOutcome,
     UnresolvedUse,

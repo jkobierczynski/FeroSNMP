@@ -67,9 +67,12 @@ jobs:
       - run: cargo test -p mib-core --test corpus --locked
       # `ferosnmp lint corpus` against its stored snapshot.
       - run: cargo test -p ferosnmp-cli --test cli --locked
+      # The ifTable and ipNetToMediaTable golden files need IF-MIB and
+      # RFC1213-MIB, which are fetched.
+      - run: cargo test -p snmp-core --test tables --locked
 
   agent:
-    # get/next/bulk/walk against a real net-snmp agent with fixed values,
+    # get/next/bulk/walk/table/set against a real net-snmp agent with fixed values,
     # compared with the snapshots in apps/cli/tests/snapshots.
     name: Query tests (net-snmp)
     runs-on: ubuntu-latest

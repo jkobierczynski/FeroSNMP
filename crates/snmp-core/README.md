@@ -1,6 +1,6 @@
 # snmp-core
 
-The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK and WALK over SNMPv1,
+The SNMP engine of FeroSNMP: GET, GETNEXT, GETBULK, WALK and SET over SNMPv1,
 SNMPv2c and SNMPv3 (USM) on tokio, with timeouts, retries, a per-agent concurrency limit, an
 operation log, and value formatting through the MIBs of `mib-core` (enum
 labels, BITS names, DISPLAY-HINTs, units).
@@ -22,6 +22,23 @@ thread of its own and forwards events to the window (see
 Also here: `resolve_object` turns what a user types (`sysDescr.0`,
 `IF-MIB::ifDescr.3`, `1.3.6.1.2.1`) into an OID, and `Formatter::value_text`
 splits a value into type and text for table columns.
+
+## Tables and SET
+
+- `src/table.rs`: `TableView` collects the results of a table walk into
+  rows, splitting each row's instance into its INDEX values with
+  `mib_core::Table::decode_index` (multi-part, `AUGMENTS`, `IMPLIED`), and
+  prints it as text or CSV. Rows arrive column by column and are kept in
+  OID order.
+- `src/input.rs`: `ValueInput` turns typed text into the value to SET, with
+  the MIB's type: enumeration labels, ranges, sizes, `BITS` names and
+  display hints (`display_hint::parse_octets` and `parse_integer` are the
+  inverse of the formatting). It checks writability and constraints before
+  anything is sent; `ValueType` overrides the type, as net-snmp's
+  `snmpset` letters do. `edit_text` turns a current value back into text
+  that reads back the same, to fill in a SET dialog.
+- `Operation::Set(varbinds)` sends one SET request; the agent's error
+  status comes back as `Error::Agent`, and `Error::hint` explains each one.
 
 `examples/big_agent.rs` is a tiny agent with a made-up table of any size,
 for trying walks of 100,000 rows and more:
@@ -58,7 +75,12 @@ operation uses. Errors are `Error::Security` with a `SecurityProblem`.
   retries, late answers, non-increasing OIDs, the concurrency limit).
 - `tests/agent/` is a net-snmp `snmpd` setup with fixed values
   (`FEROSNMP-TEST-MIB`), used by the golden-file tests in
-  `apps/cli/tests/agent.rs`. See CONTRIBUTING.md.
+  `apps/cli/tests/agent.rs`. Its tables cover every kind of INDEX, and its
+  `fstSettings` objects can be written with community `private`. See
+  CONTRIBUTING.md.
+- `tests/tables.rs` splits stored walks (`tests/tables/*.walk`, in
+  `snmpwalk -On` format) into tables and compares them with snapshots;
+  `tests/input.rs` checks reading and checking SET values.
 
 ## What snmp2 0.5 does and does not do
 

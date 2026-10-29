@@ -3,9 +3,49 @@
 All notable changes to FeroSNMP. Versions follow [Semantic Versioning](https://semver.org/);
 before 1.0, a minor version may change behaviour.
 
-## [Unreleased]
+## [0.3.0]
 
-SNMPv3 with the User-based Security Model.
+SNMPv3 with the User-based Security Model, tables split into their INDEX
+columns, and SET with checks against the MIB.
+
+### Tables
+
+- `ferosnmp table AGENT TABLE` walks a table (given by the table, its entry
+  or any column, such as `ifTable`) and prints it as aligned columns, or
+  with `--format csv` as CSV. Each row's instance is split into its INDEX
+  values as RFC 2578 defines them: integers, `IpAddress`, strings with a
+  length, fixed-size strings, OIDs, and the `IMPLIED` last index. A table
+  that `AUGMENTS` another uses the other table's INDEX. Index values use the
+  MIB's enumeration labels and display hints.
+- A row whose instance does not fit the INDEX is shown as `?.1.2.3` with a
+  note saying where it went wrong, and the exit code is 1.
+- Window: **Table** (**Ctrl+T**) shows the table in a new **Table** tab,
+  with copying, CSV export and a right-click menu per cell.
+- Library: `mib_core::Table`, `MibSet::table`, `decode_index` and
+  `encode_index`; `snmp_core::TableView`.
+- Golden-file tests for `ifTable`, `ifXTable` (AUGMENTS), `ipNetToMediaTable`,
+  a three-part INDEX, `IMPLIED` strings and an `IMPLIED` OID.
+
+### SET
+
+- `ferosnmp set AGENT OBJECT VALUE [OBJECT VALUE ...]` writes one or more
+  values in one request. The type comes from the MIB, and the value is
+  checked before it is sent: enumeration labels or numbers, ranges, sizes,
+  `BITS` names, display hints (MAC addresses, `d-1` tenths) and whether the
+  object is writable. `--type` (net-snmp's letters `i u c C t a o s x b`, or
+  names) sets the type for an object no loaded MIB defines, or overrides
+  the MIB's; `--force` sends a value the MIB does not allow, to test an
+  agent.
+- Window: **Set...** (**F2**) opens a Set value dialog for the Object box,
+  a result or a table cell, with the current value filled in, the allowed
+  values listed, and a line that says what will be sent or why not, as you
+  type.
+- Each error an agent can answer to a SET (`noAccess`, `notWritable`,
+  `wrongType`, `wrongLength`, `wrongValue`, `noCreation`,
+  `inconsistentValue`, `commitFailed`, ...) comes with a hint, for example
+  that a read-only community cannot SET.
+- The net-snmp CI agent has writable test objects of every type, a
+  `private` community and an SNMPv3 user that may write them.
 
 ### SNMPv3
 

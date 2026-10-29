@@ -43,24 +43,28 @@ pub(crate) enum Request {
         non_repeaters: u32,
         max_repetitions: u32,
     },
+    Set(Vec<Varbind>),
 }
 
 impl Request {
-    pub fn oids(&self) -> &[Oid] {
+    pub fn oids(&self) -> Vec<Oid> {
         match self {
-            Request::Get(oids) | Request::GetBulk { oids, .. } => oids,
-            Request::GetNext(oid) => std::slice::from_ref(oid),
+            Request::Get(oids) | Request::GetBulk { oids, .. } => oids.clone(),
+            Request::GetNext(oid) => vec![oid.clone()],
+            Request::Set(varbinds) => varbinds.iter().map(|v| v.oid.clone()).collect(),
         }
     }
 }
 
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (name, oids) = match self {
-            Request::Get(oids) => ("GET", oids.as_slice()),
-            Request::GetNext(oid) => ("GETNEXT", std::slice::from_ref(oid)),
-            Request::GetBulk { oids, .. } => ("GETBULK", oids.as_slice()),
+        let name = match self {
+            Request::Get(_) => "GET",
+            Request::GetNext(_) => "GETNEXT",
+            Request::GetBulk { .. } => "GETBULK",
+            Request::Set(_) => "SET",
         };
+        let oids = self.oids();
         write!(f, "{name}")?;
         for (i, oid) in oids.iter().enumerate() {
             write!(f, "{}{oid}", if i == 0 { " " } else { ", " })?;
