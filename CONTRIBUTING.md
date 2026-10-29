@@ -83,6 +83,15 @@ crates/snmp-core/tests/agent/run-agent.sh stop
 Without `FEROSNMP_TEST_AGENT` these tests are skipped. The engine's own
 tests (`cargo test -p snmp-core`) use a small fake agent and run everywhere.
 
+For big walks there is a tiny agent with a made-up table of any size, which
+runs on Windows too:
+
+```sh
+cargo run --release -p snmp-core --example big_agent -- 100000 127.0.0.1:11162
+```
+
+Walking `1.3.6.1.4.1.99999` then returns 300,000 values (three columns).
+
 ## Dependencies and licences
 
 FeroSNMP is licensed GPL-3.0-or-later. `deny.toml` lists the licences a
