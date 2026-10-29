@@ -109,12 +109,17 @@ pub struct V3Args {
     /// Context engine ID in hex, for agents that proxy others [default: the
     /// agent's own engine ID].
     #[arg(long, value_name = "HEX", value_parser = parse_hex)]
-    pub context_engine_id: Option<Vec<u8>>,
+    pub context_engine_id: Option<Bytes>,
 }
 
 fn parse_from_str<T: std::str::FromStr<Err = String>>(text: &str) -> Result<T, String> {
     text.parse()
 }
+
+/// Bytes given as one hex option. clap reads a field written as
+/// `Option<Vec<u8>>` as a list of values, one byte each, so options of
+/// bytes use this name.
+pub type Bytes = Vec<u8>;
 
 impl V3Args {
     /// The SNMPv3 user settings.

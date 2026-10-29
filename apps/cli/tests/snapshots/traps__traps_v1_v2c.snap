@@ -1,0 +1,30 @@
+---
+source: apps/cli/tests/traps.rs
+expression: listen.output()
+---
+TIME SOURCE SNMPv1 trap, community "public"
+  FEROSNMP-V1TRAP-TEST-MIB::ftvAlarm, uptime 0:02:03.45
+  SNMPv1 enterprise FEROSNMP-V1TRAP-TEST-MIB::ftvEnterprise, agent 192.0.2.10, generic enterpriseSpecific(6), specific 3
+  FEROSNMP-V1TRAP-TEST-MIB::ftvMessage = STRING: "disk full"
+TIME SOURCE SNMPv1 trap, community "public"
+  IF-MIB::linkDown, uptime 0:00:05.00
+  SNMPv1 enterprise FEROSNMP-V1TRAP-TEST-MIB::ftvEnterprise, agent 192.0.2.10, generic linkDown(2), specific 0
+  SNMPv2-SMI::mib-2.2.2.1.1.2 = INTEGER: 2
+  hint: no loaded MIB defines the object 1.3.6.1.2.1.2.2.1.1.2 (the nearest node it is below is SNMPv2-SMI::mib-2): add the MIB that defines it to the MIB folders
+TIME SOURCE SNMPv2c trap, community "public"
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv2c inform (acknowledged), community "public"
+  FEROSNMP-TRAP-TEST-MIB::fttOverheat, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttTemperature = INTEGER: 85 degrees Celsius
+TIME SOURCE SNMPv2c trap, community "s3cret"
+  SNMPv2-SMI::enterprises.9.9.41.2.0.1, uptime 0:00:01.00
+  SNMPv2-SMI::enterprises.9.9.41.1.2.3.1.2.7 = STRING: "LINK-3-UPDOWN"
+  FEROSNMP-TRAP-TEST-MIB::fttOctets = Counter64: 18446744073709551615
+  FEROSNMP-TRAP-TEST-MIB::fttPeer = IpAddress: 192.0.2.77
+  hint: no loaded MIB defines the notification 1.3.6.1.4.1.9.9.41.2.0.1 (the nearest node it is below is SNMPv2-SMI::enterprises): add the MIB of enterprise number 9 (the vendor; see https://www.iana.org/assignments/enterprise-numbers) to the MIB folders
+  hint: no loaded MIB defines the object 1.3.6.1.4.1.9.9.41.1.2.3.1.2.7 (the nearest node it is below is SNMPv2-SMI::enterprises): add the MIB of enterprise number 9 (the vendor; see https://www.iana.org/assignments/enterprise-numbers) to the MIB folders
+TIME SOURCE SNMPv2c trap, community "public"
+  FEROSNMP-TRAP-TEST-MIB::fttOverheat, uptime 0:00:00.01
+  FEROSNMP-TRAP-TEST-MIB::fttTemperature = INTEGER: 85 degrees Celsius

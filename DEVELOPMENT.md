@@ -18,8 +18,8 @@ feature can be tested without a window and reused by other tools.
         v                          v           v
  crates/snmp-core  ------------>  crates/mib-core      crates/trap-rx
    async SNMP engine on tokio      MIB loading,          trap and INFORM
-   own v1/v2c/v3 codec and USM     lookup, diagnostics   receiver (M9)
-        |                                |
+   own v1/v2c/v3 codec and USM     lookup, diagnostics   receiver: UDP task,
+        |                                |             users, MIB decoding
         v                                v
    snmp2 (BER reader only)          mib-rs =0.10.0 (pinned, wrapped)
 ```
@@ -28,7 +28,7 @@ feature can be tested without a window and reused by other tools.
 |-------|------|------------|
 | `mib-core` | Loading a MIB library, the OID tree, node details, diagnostics with fix hints, "why this symbol?" traces, source views | `src/lib.rs` |
 | `snmp-core` | The SNMP engine: requests, walks, timeouts, retries, SNMPv3, value formatting through the MIBs | [README](crates/snmp-core/README.md) |
-| `trap-rx` | Trap and INFORM receiver; empty until M9 | `src/lib.rs` |
+| `trap-rx` | Trap and INFORM receiver: the UDP listener task, SNMPv3 trap users, decoding against the MIBs, filters, port 162 hints. The notification codec and USM checks are in `snmp-core` (`src/notify.rs`) | `src/lib.rs`, [docs/traps.md](docs/traps.md) |
 | `fero-win32` | Win32 plumbing that is not about SNMP: window classes, DPI, fonts, splitters, in-memory dialogs; meant to be shared with FeroSSH | `src/lib.rs` |
 | `ferosnmp-cli` | The `ferosnmp` command | [README](apps/cli/README.md) |
 | `ferosnmp-gui` | The window | [README](apps/gui/README.md), "How the code is organised" |
