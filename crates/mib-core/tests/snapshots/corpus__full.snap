@@ -3,7 +3,7 @@ source: crates/mib-core/tests/corpus.rs
 expression: summary(&set)
 ---
 modules: 199
-nodes: 49492
+nodes: 49509
   BFD-STD-MIB SMIv2 ietf/BFD-STD-MIB
   BFD-TC-STD-MIB SMIv2 ietf/BFD-TC-STD-MIB
   BGP4-MIB SMIv2 fetched/ietf/BGP4-MIB.my
@@ -171,7 +171,7 @@ nodes: 49492
   PW-STD-MIB SMIv2 ietf/PW-STD-MIB
   PW-TC-STD-MIB SMIv2 ietf/PW-TC-STD-MIB
   PerfHist-TC-MIB SMIv2 fetched/ietf/PerfHist-TC-MIB.my
-  Q-BRIDGE-MIB SMIv2 fetched/ietf/Q-BRIDGE.my
+  Q-BRIDGE-MIB SMIv2 fetched/ietf/Q-BRIDGE-MIB.my
   RFC-1212 SMIv1 fetched/ietf/RFC-1212
   RFC-1215 SMIv1 fetched/ietf/RFC-1215.txt
   RFC1065-SMI SMIv1 (built in)
@@ -203,7 +203,7 @@ nodes: 49492
   VDSL2-LINE-TC-MIB SMIv2 ietf/VDSL2-LINE-TC-MIB.my
   VPN-TC-STD-MIB SMIv2 fetched/ietf/VPN-TC-STD-MIB.my
   VRRPV3-MIB SMIv2 ietf/VRRPV3-MIB.my
-diagnostics: 2571
+diagnostics: 2570
   fetched/cisco/CISCO-BGP4-MIB.my:711:1: minor: CISCO-BGP4-MIB: INDEX "bgpPeerRemoteAddr" of "cbgpPeerCapsEntry" should be not-accessible in SMIv2 [index-accessible]
   fetched/cisco/CISCO-BGP4-MIB.my:832:1: minor: CISCO-BGP4-MIB: INDEX "bgpPeerRemoteAddr" of "cbgpPeerAddrFamilyEntry" should be not-accessible in SMIv2 [index-accessible]
   fetched/cisco/CISCO-BGP4-MIB.my:902:1: minor: CISCO-BGP4-MIB: INDEX "bgpPeerRemoteAddr" of "cbgpPeerAddrFamilyPrefixEntry" should be not-accessible in SMIv2 [index-accessible]
@@ -896,8 +896,9 @@ diagnostics: 2571
   fetched/ietf/P-BRIDGE.my:661:1: minor: P-BRIDGE-MIB: INDEX "dot1dTpPort" of "dot1dTpHCPortEntry" should be not-accessible in SMIv2 [index-accessible]
   fetched/ietf/P-BRIDGE.my:754:1: minor: P-BRIDGE-MIB: INDEX "dot1dTpPort" of "dot1dTpPortOverflowEntry" should be not-accessible in SMIv2 [index-accessible]
   fetched/ietf/PerfHist-TC-MIB.my:22:6: minor: PerfHist-TC-MIB: revision for LAST-UPDATED 9811071100Z is missing [revision-last-updated]
-  fetched/ietf/Q-BRIDGE.my:1494:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
-  fetched/ietf/Q-BRIDGE.my:1631:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanHCStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+  fetched/ietf/Q-BRIDGE-MIB.my:1427:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+  fetched/ietf/Q-BRIDGE-MIB.my:1530:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanHCStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+  fetched/ietf/Q-BRIDGE-MIB.my:1803:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1vProtocolPortEntry" should be not-accessible in SMIv2 [index-accessible]
   fetched/ietf/RFC1213-MIB.txt:199:1: error: RFC1213-MIB: INDEX "ifIndex" of "ifEntry" has no range restriction [index-integer-no-range]
   fetched/ietf/RFC1213-MIB.txt:585:1: error: RFC1213-MIB: INDEX "atIfIndex" of "atEntry" has no range restriction [index-integer-no-range]
   fetched/ietf/RFC1213-MIB.txt:1275:1: error: RFC1213-MIB: INDEX "ipNetToMediaIfIndex" of "ipNetToMediaEntry" has no range restriction [index-integer-no-range]
@@ -2527,12 +2528,10 @@ diagnostics: 2571
   fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: "panGlobalprotectTrap" references unknown object "panHostId" [objects-unresolved]
   fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: "panGlobalprotectTrap" references unknown object "panSerialNo" [objects-unresolved]
   fetched/siemens/SN-MSPS-SCX200-MIB:48:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "enterprises" already imported from "RFC1155-SMI", ignoring import from "SNMPv2-SMI" [import-duplicate]
-  fetched/siemens/SN-MSPS-SCX200-MIB:68:2: error: SN-MSPS-SCX200-MIB: unresolved import: "VlanIdOrNone" from "Q-BRIDGE-MIB" (symbol_not_exported) [import-not-found]
   fetched/siemens/SN-MSPS-SCX200-MIB:77:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "DisplayString" already imported from "RFC1213-MIB", ignoring import from "SNMPv2-TC" [import-duplicate]
   fetched/siemens/SN-MSPS-SCX200-MIB:6932:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrOpenState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
   fetched/siemens/SN-MSPS-SCX200-MIB:6938:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrClosedState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
   fetched/siemens/SN-MSPS-SCX200-MIB:15186:7: error: SN-MSPS-SCX200-MIB: INDEX "snMspsSyslogMailReceiverIndex" of "snMspsSyslogMailReceiverEntry" has no range restriction [index-integer-no-range]
-  fetched/siemens/SN-MSPS-SCX200-MIB:16666:16: error: SN-MSPS-SCX200-MIB: unresolved type: "snMspsDot1qStVlanPrimaryVid" references unknown type "VlanIdOrNone" [type-unknown]
   fetched/siemens/SN-MSPS-SCX200-MIB:21083:1: error: SN-MSPS-SCX200-MIB: INDEX "snMspsPtpTCPortIfIndex" of "snMspsPtpTCPortEntry" has no range restriction [index-integer-no-range]
   fetched/siemens/ULAF2-MIB:137:1: error: ULAF2-MIB: INDEX "agtPortIndex" of "agtPortEntry" has no range restriction [index-integer-no-range]
   fetched/siemens/ULAF2-MIB:498:1: error: ULAF2-MIB: INDEX "deviceSystemPortIndex" of "deviceSystemEntry" has no range restriction [index-integer-no-range]
