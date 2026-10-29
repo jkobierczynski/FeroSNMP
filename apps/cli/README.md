@@ -201,13 +201,41 @@ The agent's answer is printed like `get`'s output. When the agent refuses,
 the message says why in plain words (for example: a read-only community
 gets `noAccess`, because net-snmp needs `rwcommunity` to write).
 
+## Receiving traps
+
+```sh
+ferosnmp traps listen                              # port 162, every version
+ferosnmp traps listen --port 1162 -M mibs/         # an unprivileged port
+ferosnmp traps listen -u trapuser -a SHA -A "auth pass" -x AES -X "priv pass"
+ferosnmp traps listen --users snmptrapd.conf       # SNMPv3 users as createUser lines
+ferosnmp traps listen --format json > traps.jsonl  # JSON Lines, to save or process
+ferosnmp traps listen --notification 'link*' --from 192.0.2.1 --count 1
+```
+
+Each notification is printed with the loaded MIBs as it arrives; INFORMs
+are acknowledged. SNMPv1 traps are translated to SNMPv2 form (RFC 3584), so
+an SMIv1 `TRAP-TYPE` is shown by its name. Problems (not a notification, an
+unknown SNMPv3 user, a wrong password) go to standard error with a hint.
+
+```text
+2026-10-29T21:05:00.123Z 192.0.2.1:41003 SNMPv3 trap, user trapuser authPriv, engine 8000000001020304
+  IF-MIB::linkDown, uptime 0:42:00.00
+  IF-MIB::ifIndex.2 = INTEGER: 2
+  IF-MIB::ifOperStatus.2 = INTEGER: down(2)
+```
+
+Port 162 needs `setcap` on Linux, and on Windows the SNMP Trap service must
+be stopped; the error message says so. Setting up Windows (port, firewall)
+and sending test traps from Debian, also SNMPv3, is described in
+[docs/traps.md](../../docs/traps.md), with every option.
+
 ## Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success; `lint` found nothing at or above `--fail-on` |
 | 1 | `mib show` or `mib search` found nothing, `mib why` could not resolve the name, `lint` found problems at or above `--fail-on` (default `error`), the agent answered with an error (such as `noSuchName` or `notWritable`), a "no such object/instance" value, or an SNMPv3 security error (unknown user, wrong password, ...), or `table` found no rows or a row that does not fit the INDEX |
-| 2 | The command could not run: bad arguments, a file or folder that cannot be read, an unknown object name, a `set` value the MIB does not allow (without `--force`), or no response from the agent |
+| 2 | The command could not run: bad arguments, a file or folder that cannot be read, an unknown object name, a `set` value the MIB does not allow (without `--force`), no response from the agent, or a port `traps listen` cannot open |
 
 For a CI job that should also fail on warnings, use
 `ferosnmp lint --fail-on warning mibs/`.

@@ -1,0 +1,13 @@
+---
+source: crates/trap-rx/tests/listen.rs
+expression: output
+---
+TIME SOURCE SNMPv2c trap, community "public"
+  1.3.6.1.4.1.8072.9999.2.0.1, uptime 0:00:42.42
+  1.3.6.1.4.1.8072.9999.2.1.1 = STRING: "eth0"
+  1.3.6.1.4.1.8072.9999.2.1.2 = INTEGER: 2
+  hint: no MIBs are loaded, so the notification 1.3.6.1.4.1.8072.9999.2.0.1 is shown as a number
+TIME SOURCE SNMPv1 trap, community "public"
+  IF-MIB::linkDown, uptime 0:00:05.00
+  SNMPv1 enterprise 1.3.6.1.4.1.8072.9999.3, agent 192.0.2.10, generic linkDown(2), specific 0
+  1.3.6.1.2.1.2.2.1.1.2 = INTEGER: 2

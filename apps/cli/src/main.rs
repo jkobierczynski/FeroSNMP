@@ -16,6 +16,8 @@
 //!   the MIB type and checked against the MIB first.
 //! - `ferosnmp discover <agent>`: an SNMPv3 agent's engine ID, boots and
 //!   time.
+//! - `ferosnmp traps listen`: receive traps and INFORMs (SNMPv1, v2c and v3)
+//!   and print them decoded with the MIBs.
 //!
 //! Exit codes, so scripts and CI jobs can rely on them:
 //!
@@ -34,6 +36,7 @@ mod lint;
 mod mib;
 mod query;
 mod sources;
+mod traps;
 
 use std::fmt;
 use std::io::{self, BufWriter, Write};
@@ -225,6 +228,25 @@ enum Command {
     Discover {
         #[command(flatten)]
         query: QueryArgs,
+    },
+
+    /// Receive SNMP notifications (traps and INFORMs).
+    Traps {
+        #[command(subcommand)]
+        command: TrapsCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum TrapsCommand {
+    /// Listen for traps and INFORMs (SNMPv1, v2c and v3) and print each one
+    /// decoded with the MIBs. INFORMs are acknowledged. Runs until Ctrl+C,
+    /// or until --count notifications arrived.
+    ///
+    /// Example: ferosnmp traps listen --port 1162 -u admin -a SHA -A authpass -x AES -X privpass
+    Listen {
+        #[command(flatten)]
+        args: traps::ListenArgs,
     },
 }
 
@@ -442,6 +464,9 @@ fn run(command: Command, out: &mut impl Write) -> Result<Status, CliError> {
             )
         }
         Command::Discover { query } => query::run(&query, Query::Discover, out),
+        Command::Traps {
+            command: TrapsCommand::Listen { args },
+        } => traps::listen(&args, out),
     }
 }
 
@@ -457,5 +482,45 @@ mod tests {
     #[test]
     fn command_line_definition_is_valid() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn hex_options_are_one_value() {
+        let cli = Cli::try_parse_from([
+            "ferosnmp",
+            "get",
+            "192.0.2.1",
+            "-u",
+            "admin",
+            "--context-engine-id",
+            "8000000001",
+            "sysDescr.0",
+        ])
+        .unwrap();
+        let Command::Get { query, .. } = cli.command else {
+            panic!("not get");
+        };
+        assert_eq!(query.v3.context_engine_id, Some(vec![0x80, 0, 0, 0, 1]));
+
+        let cli = Cli::try_parse_from([
+            "ferosnmp",
+            "traps",
+            "listen",
+            "--local-engine-id",
+            "0x8000000002",
+            "-u",
+            "admin",
+            "-e",
+            "8000000003",
+        ])
+        .unwrap();
+        let Command::Traps {
+            command: TrapsCommand::Listen { args },
+        } = cli.command
+        else {
+            panic!("not traps listen");
+        };
+        assert_eq!(args.local_engine_id, Some(vec![0x80, 0, 0, 0, 2]));
+        assert_eq!(args.user.engine_id, Some(vec![0x80, 0, 0, 0, 3]));
     }
 }

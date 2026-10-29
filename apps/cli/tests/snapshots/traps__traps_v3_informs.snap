@@ -1,0 +1,52 @@
+---
+source: apps/cli/tests/traps.rs
+expression: listen.output()
+---
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-noauth noAuthNoPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-md5-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha-none authNoPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha-des authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha-aes192 authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha-aes256 authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha224-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha256-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha384-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-sha512-aes authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)
+TIME SOURCE SNMPv3 inform (acknowledged), user trap-bound authPriv, engine 80000000056665726f736e6d7074657374
+  FEROSNMP-TRAP-TEST-MIB::fttPortChange, uptime 0:00:42.42
+  FEROSNMP-TRAP-TEST-MIB::fttPortName = STRING: "eth0"
+  FEROSNMP-TRAP-TEST-MIB::fttPortState = INTEGER: down(2)

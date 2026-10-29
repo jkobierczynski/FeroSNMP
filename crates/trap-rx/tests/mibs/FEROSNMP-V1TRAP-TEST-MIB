@@ -1,0 +1,33 @@
+FEROSNMP-V1TRAP-TEST-MIB DEFINITIONS ::= BEGIN
+
+-- An SMIv1 module with TRAP-TYPE definitions, for the SNMPv1 trap tests of
+-- the FeroSNMP trap receiver. A v1 trap with enterprise ftvEnterprise and
+-- specific-trap 3 is the SNMPv2 notification ftvEnterprise.0.3
+-- (RFC 3584, 3.1).
+
+IMPORTS
+    enterprises
+        FROM RFC1155-SMI
+    OBJECT-TYPE
+        FROM RFC-1212
+    TRAP-TYPE
+        FROM RFC-1215;
+
+ftvNetSnmp     OBJECT IDENTIFIER ::= { enterprises 8072 }
+ftvPlaypen     OBJECT IDENTIFIER ::= { ftvNetSnmp 9999 }
+ftvEnterprise  OBJECT IDENTIFIER ::= { ftvPlaypen 3 }
+
+ftvMessage OBJECT-TYPE
+    SYNTAX  OCTET STRING
+    ACCESS  read-only
+    STATUS  mandatory
+    DESCRIPTION "A message sent with the trap."
+    ::= { ftvEnterprise 1 }
+
+ftvAlarm TRAP-TYPE
+    ENTERPRISE  ftvEnterprise
+    VARIABLES   { ftvMessage }
+    DESCRIPTION "An alarm, sent as an SNMPv1 trap."
+    ::= 3
+
+END

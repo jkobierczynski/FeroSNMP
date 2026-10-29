@@ -73,6 +73,7 @@ jobs:
 
   agent:
     # get/next/bulk/walk/table/set against a real net-snmp agent with fixed values,
+    # and traps and INFORMs sent by net-snmp's snmptrap and snmpinform,
     # compared with the snapshots in apps/cli/tests/snapshots.
     name: Query tests (net-snmp)
     runs-on: ubuntu-latest
@@ -80,11 +81,15 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y snmpd
+      # snmpd is the agent; snmp has snmptrap and snmpinform.
+      - run: sudo apt-get update && sudo apt-get install -y snmpd snmp
       - run: crates/snmp-core/tests/agent/run-agent.sh
       - run: cargo test -p ferosnmp-cli --test agent --locked
         env:
           FEROSNMP_TEST_AGENT: 127.0.0.1:11161
+      - run: cargo test -p ferosnmp-cli --test traps --locked
+        env:
+          FEROSNMP_TEST_TRAPS: "1"
       - name: Show the agent's log
         if: failure()
         run: cat "${TMPDIR:-/tmp}/ferosnmp-test-agent/snmpd.log"

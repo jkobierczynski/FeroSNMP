@@ -10,12 +10,12 @@ use snmp2::AsnReader;
 use crate::codec::{self, SEQUENCE, integer, read_integer, tlv};
 use crate::error::SecurityProblem;
 use crate::session::{Request, Response};
-use crate::usm::{Keys, Usm};
+use crate::usm::{Keys, SecurityLevel, Usm};
 use crate::value::tag;
 
-const FLAG_AUTH: u8 = 0x01;
-const FLAG_PRIV: u8 = 0x02;
-const FLAG_REPORTABLE: u8 = 0x04;
+pub(crate) const FLAG_AUTH: u8 = 0x01;
+pub(crate) const FLAG_PRIV: u8 = 0x02;
+pub(crate) const FLAG_REPORTABLE: u8 = 0x04;
 /// `msgSecurityModel` of USM.
 const USM_MODEL: i64 = 3;
 /// `msgMaxSize`: the largest message we accept (a UDP datagram over IPv4).
@@ -65,34 +65,55 @@ pub(crate) fn encode_request(
         .as_deref()
         .unwrap_or(&engine.engine_id);
     let scoped = scoped_pdu(context_engine, usm.context_name.as_bytes(), &pdu);
+    Ok(seal(
+        usm,
+        usm.level,
+        keys,
+        outgoing.msg_id,
+        FLAG_REPORTABLE,
+        engine,
+        &scoped,
+        outgoing.salt,
+    ))
+}
 
-    let mut flags = FLAG_REPORTABLE;
-    let (data, privacy) = if usm.level.has_priv() {
+/// A whole message around a ScopedPDU, encrypted and authenticated as
+/// `level` asks, with `engine` as the authoritative engine. `flags` are
+/// added to the security flags (`FLAG_REPORTABLE` for requests).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn seal(
+    usm: &Usm,
+    level: SecurityLevel,
+    keys: &Keys,
+    msg_id: i32,
+    flags: u8,
+    engine: &EngineTime,
+    scoped: &[u8],
+    salt: u64,
+) -> Vec<u8> {
+    let mut flags = flags;
+    let (data, privacy) = if level.has_priv() {
         flags |= FLAG_PRIV;
-        let (ciphertext, salt) = usm.priv_protocol.encrypt(
-            &keys.privacy,
-            engine.boots,
-            engine.time,
-            outgoing.salt,
-            &scoped,
-        );
+        let (ciphertext, salt) =
+            usm.priv_protocol
+                .encrypt(&keys.privacy, engine.boots, engine.time, salt, scoped);
         (tlv(tag::OCTET_STRING, &ciphertext), salt)
     } else {
-        (scoped, Vec::new())
+        (scoped.to_vec(), Vec::new())
     };
-    let auth_placeholder = if usm.level.has_auth() {
+    let auth_placeholder = if level.has_auth() {
         flags |= FLAG_AUTH;
         vec![0; usm.auth_protocol.mac_len()]
     } else {
         Vec::new()
     };
     let mut bytes = message(
-        outgoing.msg_id,
+        msg_id,
         flags,
         &security_parameters(engine, usm.user.as_bytes(), &auth_placeholder, &privacy),
         &data,
     );
-    if usm.level.has_auth() {
+    if level.has_auth() {
         // RFC 3414, 6.3.1: the code covers the whole message, with zeros
         // where the code goes.
         let range = decode_message(&bytes)
@@ -101,7 +122,7 @@ pub(crate) fn encode_request(
         let code = usm.auth_protocol.mac(&keys.auth, &bytes);
         bytes[range].copy_from_slice(&code);
     }
-    Ok(bytes)
+    bytes
 }
 
 impl EngineTime {
@@ -114,14 +135,19 @@ impl EngineTime {
     }
 }
 
-fn scoped_pdu(context_engine_id: &[u8], context_name: &[u8], pdu: &[u8]) -> Vec<u8> {
+pub(crate) fn scoped_pdu(context_engine_id: &[u8], context_name: &[u8], pdu: &[u8]) -> Vec<u8> {
     let mut content = tlv(tag::OCTET_STRING, context_engine_id);
     content.extend(tlv(tag::OCTET_STRING, context_name));
     content.extend_from_slice(pdu);
     tlv(SEQUENCE, &content)
 }
 
-fn security_parameters(engine: &EngineTime, user: &[u8], auth: &[u8], privacy: &[u8]) -> Vec<u8> {
+pub(crate) fn security_parameters(
+    engine: &EngineTime,
+    user: &[u8],
+    auth: &[u8],
+    privacy: &[u8],
+) -> Vec<u8> {
     let mut content = tlv(tag::OCTET_STRING, &engine.engine_id);
     content.extend(integer(i64::from(engine.boots)));
     content.extend(integer(i64::from(engine.time)));
@@ -131,7 +157,7 @@ fn security_parameters(engine: &EngineTime, user: &[u8], auth: &[u8], privacy: &
     tlv(SEQUENCE, &content)
 }
 
-fn message(msg_id: i32, flags: u8, security: &[u8], data: &[u8]) -> Vec<u8> {
+pub(crate) fn message(msg_id: i32, flags: u8, security: &[u8], data: &[u8]) -> Vec<u8> {
     let mut global = integer(i64::from(msg_id));
     global.extend(integer(MAX_SIZE));
     global.extend(tlv(tag::OCTET_STRING, &[flags]));
@@ -146,20 +172,20 @@ fn message(msg_id: i32, flags: u8, security: &[u8], data: &[u8]) -> Vec<u8> {
 
 /// A received message, before its security is checked.
 #[derive(Debug)]
-struct Message<'a> {
-    msg_id: i32,
-    flags: u8,
-    engine: EngineTime,
-    user: &'a [u8],
-    auth: &'a [u8],
+pub(crate) struct Message<'a> {
+    pub msg_id: i32,
+    pub flags: u8,
+    pub engine: EngineTime,
+    pub user: &'a [u8],
+    pub auth: &'a [u8],
     /// Where `auth` is in the message.
-    auth_range: Range<usize>,
-    privacy: &'a [u8],
+    pub auth_range: Range<usize>,
+    pub privacy: &'a [u8],
     /// The ScopedPDU (whole TLV) or, when encrypted, the ciphertext.
-    data: &'a [u8],
+    pub data: &'a [u8],
 }
 
-fn decode_message(bytes: &[u8]) -> Result<Message<'_>, String> {
+pub(crate) fn decode_message(bytes: &[u8]) -> Result<Message<'_>, String> {
     let asn = |e: snmp2::Error| e.to_string();
     let offset = |part: &[u8]| part.as_ptr() as usize - bytes.as_ptr() as usize;
 
@@ -334,7 +360,7 @@ fn decode_scoped_pdu(bytes: &[u8]) -> Result<(u8, i32, Response), String> {
 }
 
 /// Compare authentication codes without stopping at the first difference.
-fn same(a: &[u8], b: &[u8]) -> bool {
+pub(crate) fn same(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 

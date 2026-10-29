@@ -23,6 +23,7 @@ publish = false
 [workspace.dependencies]
 mib-core = { path = "crates/mib-core" }
 snmp-core = { path = "crates/snmp-core" }
+trap-rx = { path = "crates/trap-rx" }
 fero-win32 = { path = "crates/fero-win32" }
 
 # mib-rs is pre-1.0 and may break its API in any minor release, so it is pinned

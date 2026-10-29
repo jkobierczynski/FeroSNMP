@@ -27,8 +27,15 @@ runs on Linux and macOS.
   shown through the MIBs: names, enum labels, DISPLAY-HINTs and units. Walks
   of hundreds of thousands of rows stream into a list that never freezes the
   window, and stop safely on agents that return OIDs out of order.
-- **Planned for 1.0**: a table view that splits instances by INDEX into
-  columns, SET with type checks, and a trap and INFORM receiver. See
+- **Tables and SET**: a table view that splits each row's instance by the
+  table's INDEX into real columns, and SET with the value built from the
+  MIB type and checked against its enums, ranges and sizes.
+- **Trap and INFORM receiver**: `ferosnmp traps listen` receives SNMPv1,
+  SNMPv2c and SNMPv3 traps and INFORMs, acknowledges INFORMs, and decodes
+  each notification against the loaded MIBs, with a hint to load the
+  vendor's MIB for anything unknown. Text or JSON Lines output, with
+  filters. See [docs/traps.md](docs/traps.md).
+- **Planned for 1.0**: a Traps tab in the window. See
   [ROADMAP.md](ROADMAP.md).
 
 The window runs on Windows 10 and 11. The command-line tool builds on Windows,
@@ -55,6 +62,7 @@ ferosnmp mib -M mibs/ search 'if*Octets'       # find objects by pattern
 ferosnmp lint mibs/VENDOR-MIB.my               # what is wrong with this MIB?
 ferosnmp walk -c public 192.0.2.1 system       # walk an agent
 ferosnmp walk -u admin -l authPriv -a SHA-256 -x AES 192.0.2.1 ifTable
+ferosnmp traps listen --port 1162 -M mibs/      # print incoming traps
 ```
 
 See the [command-line guide](apps/cli/README.md) for all commands and options,
@@ -67,6 +75,7 @@ and [docs/snmpv3.md](docs/snmpv3.md) for SNMPv3.
 | [apps/gui/README.md](apps/gui/README.md) | Using the window |
 | [apps/cli/README.md](apps/cli/README.md) | Using the command-line tool |
 | [docs/snmpv3.md](docs/snmpv3.md) | SNMPv3 setup, also on net-snmp's `snmpd` |
+| [docs/traps.md](docs/traps.md) | Receiving traps: Windows port 162 and firewall, test traps from Debian |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
 | [ROADMAP.md](ROADMAP.md) | Milestones and what comes next |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | How the code is designed, for developers |

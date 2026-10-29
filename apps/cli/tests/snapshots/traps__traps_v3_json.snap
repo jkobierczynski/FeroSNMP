@@ -1,0 +1,25 @@
+---
+source: apps/cli/tests/traps.rs
+expression: "serde_json::to_string_pretty(&first).unwrap()"
+---
+{
+  "time": "TIME",
+  "source": "SOURCE",
+  "version": "3",
+  "type": "trap",
+  "user": "trap-md5-none",
+  "level": "authNoPriv",
+  "engine_id": "80001f88040102030405",
+  "notification": "FEROSNMP-TRAP-TEST-MIB::fttOverheat",
+  "oid": "1.3.6.1.4.1.8072.9999.2.0.2",
+  "known": true,
+  "uptime": 4242,
+  "objects": [
+    {
+      "name": "FEROSNMP-TRAP-TEST-MIB::fttTemperature",
+      "oid": "1.3.6.1.4.1.8072.9999.2.1.3",
+      "type": "INTEGER",
+      "value": "85 degrees Celsius"
+    }
+  ]
+}

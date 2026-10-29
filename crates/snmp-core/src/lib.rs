@@ -20,6 +20,9 @@
 //!   [`Failed`](Event::Failed).
 //! - A [`Formatter`] turns results into text such as
 //!   `IF-MIB::ifOperStatus.1 = INTEGER: up(1)`.
+//! - A [`NotificationReceiver`] decodes received traps and INFORMs
+//!   (SNMPv1, SNMPv2c and SNMPv3) and builds the replies they need; the
+//!   `trap-rx` crate puts it behind a UDP socket.
 //!
 //! # Example
 //!
@@ -56,6 +59,7 @@ mod engine;
 mod error;
 mod format;
 mod input;
+mod notify;
 mod object;
 mod session;
 mod table;
@@ -76,6 +80,11 @@ pub use engine::{
 pub use error::{Error, ErrorStatus, SecurityProblem};
 pub use format::{Formatter, ValueText, raw_line};
 pub use input::{InputError, ValueInput, ValueType};
+pub use notify::{
+    Handled, Notification, NotificationKind, NotificationReceiver, NotificationSecurity,
+    ReceiveError, SNMP_TRAP_ADDRESS_0, SNMP_TRAP_COMMUNITY_0, SNMP_TRAP_ENTERPRISE_0,
+    SNMP_TRAP_OID_0, SNMP_TRAPS, SYS_UP_TIME_0, TrapUser, UsmSecurity, V1Trap, new_engine_id,
+};
 pub use object::{ObjectError, resolve_object};
 pub use session::{EngineInfo, LogEntry, uptime_text};
 pub use table::{TableRow, TableView, index_text};

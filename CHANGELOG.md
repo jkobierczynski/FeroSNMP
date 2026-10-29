@@ -3,6 +3,41 @@
 All notable changes to FeroSNMP. Versions follow [Semantic Versioning](https://semver.org/);
 before 1.0, a minor version may change behaviour.
 
+## [Unreleased]
+
+### Trap and INFORM receiver
+
+- `ferosnmp traps listen` receives notifications on UDP port 162 (or
+  `--port`) and prints each one decoded with the loaded MIBs: the
+  notification's name, the sender's uptime and the objects with enum labels,
+  display hints and units. `--format json` writes JSON Lines; `--from`,
+  `--notification` and `--count` choose what to show. See
+  [docs/traps.md](docs/traps.md).
+- SNMPv1 traps are translated to their SNMPv2 notification (RFC 3584), so a
+  `TRAP-TYPE` in an SMIv1 MIB is found by its name. SNMPv2c traps and
+  INFORMs; INFORMs are acknowledged.
+- SNMPv3 traps and INFORMs with every protocol of 0.3.0. Trap users come
+  from `-u`/`-a`/`-A`/`-x`/`-X` or from `createUser` lines (`--users`, an
+  existing `snmptrapd.conf` works), optionally bound to a sender's engine ID
+  with `-e`. For INFORMs the receiver answers engine discovery and checks
+  the time window. Unknown users, wrong passwords and level mismatches are
+  reported with a hint.
+- Notifications and objects no loaded MIB defines are shown numerically with
+  a hint to load the vendor's MIB (by enterprise number).
+- When port 162 cannot be opened, the message names the cause: the Windows
+  SNMP Trap service, Linux needing `setcap`, or another receiver; port 1162
+  is offered instead.
+- Library: `snmp_core::NotificationReceiver` (the codec and USM checks) and
+  the `trap-rx` crate (UDP listener task, users, decoding, filters).
+- Tests: datagrams recorded from net-snmp decode on every platform; in CI,
+  `snmptrap` and `snmpinform` send every kind of notification with every
+  SNMPv3 protocol.
+
+### Fixed
+
+- `--context-engine-id` made every query command crash; it now takes the
+  engine ID in hex as documented.
+
 ## [0.3.0]
 
 SNMPv3 with the User-based Security Model, tables split into their INDEX

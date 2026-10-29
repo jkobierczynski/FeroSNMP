@@ -6,7 +6,7 @@
 |------|------------|
 | `crates/mib-core` | Loads MIB libraries and answers "what is this OID/name?". Wraps [mib-rs](https://docs.rs/mib-rs/0.10.0). |
 | `crates/snmp-core` | Async SNMP engine on tokio: GET, GETNEXT, GETBULK, WALK. See [crates/snmp-core/README.md](crates/snmp-core/README.md). |
-| `crates/trap-rx` | Trap and INFORM receiver (from milestone M9). |
+| `crates/trap-rx` | Trap and INFORM receiver: UDP listener, SNMPv3 trap users, decoding against the MIBs. See [docs/traps.md](docs/traps.md). |
 | `apps/cli` | The `ferosnmp` command-line tool. See [apps/cli/README.md](apps/cli/README.md). |
 | `crates/fero-win32` | Small Win32 helpers shared by the Fero tools: window classes, DPI, fonts, splitters, dialogs. |
 | `apps/gui` | The Win32 GUI (Windows only). See [apps/gui/README.md](apps/gui/README.md). |
@@ -92,6 +92,27 @@ agent restarts.
 
 Without `FEROSNMP_TEST_AGENT` these tests are skipped. The engine's own
 tests (`cargo test -p snmp-core`) use a small fake agent and run everywhere.
+
+### Trap tests against net-snmp
+
+`apps/cli/tests/traps.rs` starts `ferosnmp traps listen` on a free port and
+sends it SNMPv1, SNMPv2c and SNMPv3 traps and INFORMs with net-snmp's
+`snmptrap` and `snmpinform`, for every SNMPv3 authentication and privacy
+protocol Debian's net-snmp has. The output is compared with snapshots. It
+needs net-snmp's tools but no agent:
+
+```sh
+sudo apt install snmp                      # once (Debian, Ubuntu, WSL)
+FEROSNMP_TEST_TRAPS=1 cargo test -p ferosnmp-cli --test traps
+```
+
+The test MIBs (`FEROSNMP-TRAP-TEST-MIB`, and the SMIv1
+`FEROSNMP-V1TRAP-TEST-MIB` with a `TRAP-TYPE`) and the trap users
+(`users.conf`) are in `crates/trap-rx/tests/`. Without
+`FEROSNMP_TEST_TRAPS=1` these tests are skipped. Everywhere else, also on
+Windows, `cargo test -p snmp-core -p trap-rx` decodes datagrams recorded from
+net-snmp (`crates/snmp-core/tests/notifications/`) and sends them through a
+real UDP listener on localhost.
 
 For big walks there is a tiny agent with a made-up table of any size, which
 runs on Windows too:

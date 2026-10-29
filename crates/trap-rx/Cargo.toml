@@ -1,6 +1,6 @@
 [package]
 name = "trap-rx"
-description = "SNMP trap and INFORM receiver for FeroSNMP (placeholder until phase 4)"
+description = "SNMP trap and INFORM receiver for FeroSNMP"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,13 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+mib-core.workspace = true
+serde_json.workspace = true
+snmp-core.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
 
 [lints]
 workspace = true
