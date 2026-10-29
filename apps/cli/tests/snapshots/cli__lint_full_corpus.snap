@@ -725,8 +725,9 @@ corpus/fetched/ietf/P-BRIDGE.my:464:1: minor: P-BRIDGE-MIB: INDEX "dot1dRegenUse
 corpus/fetched/ietf/P-BRIDGE.my:661:1: minor: P-BRIDGE-MIB: INDEX "dot1dTpPort" of "dot1dTpHCPortEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/ietf/P-BRIDGE.my:754:1: minor: P-BRIDGE-MIB: INDEX "dot1dTpPort" of "dot1dTpPortOverflowEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/ietf/PerfHist-TC-MIB.my:22:6: minor: PerfHist-TC-MIB: revision for LAST-UPDATED 9811071100Z is missing [revision-last-updated]
-corpus/fetched/ietf/Q-BRIDGE.my:1494:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
-corpus/fetched/ietf/Q-BRIDGE.my:1631:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanHCStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+corpus/fetched/ietf/Q-BRIDGE-MIB.my:1427:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+corpus/fetched/ietf/Q-BRIDGE-MIB.my:1530:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1qPortVlanHCStatisticsEntry" should be not-accessible in SMIv2 [index-accessible]
+corpus/fetched/ietf/Q-BRIDGE-MIB.my:1803:1: minor: Q-BRIDGE-MIB: INDEX "dot1dBasePort" of "dot1vProtocolPortEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/fetched/ietf/RFC1213-MIB.txt:199:1: error: RFC1213-MIB: INDEX "ifIndex" of "ifEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/ietf/RFC1213-MIB.txt:585:1: error: RFC1213-MIB: INDEX "atIfIndex" of "atEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/ietf/RFC1213-MIB.txt:1275:1: error: RFC1213-MIB: INDEX "ipNetToMediaIfIndex" of "ipNetToMediaEntry" has no range restriction [index-integer-no-range]
@@ -2370,14 +2371,10 @@ corpus/fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: 
 corpus/fetched/paloalto/PAN-TRAPS:2495:3: error: PAN-TRAPS: unresolved OBJECTS: "panGlobalprotectTrap" references unknown object "panSerialNo" [objects-unresolved]
     hint: No loaded module defines panSerialNo. Check the spelling, or load the MIB that defines it (add its folder to the MIB folders).
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:48:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "enterprises" already imported from "RFC1155-SMI", ignoring import from "SNMPv2-SMI" [import-duplicate]
-corpus/fetched/siemens/SN-MSPS-SCX200-MIB:68:2: error: SN-MSPS-SCX200-MIB: unresolved import: "VlanIdOrNone" from "Q-BRIDGE-MIB" (symbol_not_exported) [import-not-found]
-    hint: Q-BRIDGE-MIB does not define VlanIdOrNone, and no other loaded module does. Check the spelling, or load the newer version of Q-BRIDGE-MIB that added it.
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:77:2: minor: SN-MSPS-SCX200-MIB: duplicate import: "DisplayString" already imported from "RFC1213-MIB", ignoring import from "SNMPv2-TC" [import-duplicate]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:6932:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrOpenState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:6938:1: minor: SN-MSPS-SCX200-MIB: notification "snMspsTrapMrpInterconMgrClosedState" references "snMspsMrpInterconIndex" which is not-accessible [notification-object-access]
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:15186:7: error: SN-MSPS-SCX200-MIB: INDEX "snMspsSyslogMailReceiverIndex" of "snMspsSyslogMailReceiverEntry" has no range restriction [index-integer-no-range]
-corpus/fetched/siemens/SN-MSPS-SCX200-MIB:16666:16: error: SN-MSPS-SCX200-MIB: unresolved type: "snMspsDot1qStVlanPrimaryVid" references unknown type "VlanIdOrNone" [type-unknown]
-    hint: VlanIdOrNone is imported FROM Q-BRIDGE-MIB, but that import failed; fix the IMPORTS first.
 corpus/fetched/siemens/SN-MSPS-SCX200-MIB:21083:1: error: SN-MSPS-SCX200-MIB: INDEX "snMspsPtpTCPortIfIndex" of "snMspsPtpTCPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/siemens/ULAF2-MIB:137:1: error: ULAF2-MIB: INDEX "agtPortIndex" of "agtPortEntry" has no range restriction [index-integer-no-range]
 corpus/fetched/siemens/ULAF2-MIB:498:1: error: ULAF2-MIB: INDEX "deviceSystemPortIndex" of "deviceSystemEntry" has no range restriction [index-integer-no-range]
@@ -2620,4 +2617,4 @@ corpus/ietf/VDSL2-LINE-MIB.my:6146:1: minor: VDSL2-LINE-MIB: INDEX "ifIndex" of 
 corpus/ietf/VRRPV3-MIB.my:26:7: minor: VRRPV3-MIB: revision for LAST-UPDATED 201202130000Z is missing [revision-last-updated]
 corpus/ietf/VRRPV3-MIB.my:102:8: minor: VRRPV3-MIB: INDEX "ifIndex" of "vrrpv3OperationsEntry" should be not-accessible in SMIv2 [index-accessible]
 corpus/ietf/VRRPV3-MIB.my:402:8: minor: VRRPV3-MIB: INDEX "ifIndex" of "vrrpv3AssociatedIpAddrEntry" should be not-accessible in SMIv2 [index-accessible]
-198 modules checked: 882 errors, 1689 warnings
+198 modules checked: 880 errors, 1690 warnings
