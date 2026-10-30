@@ -662,7 +662,7 @@ impl AgentsDialog {
 }
 
 /// What the privacy list shows: the name, and which AES key extension.
-fn priv_label(protocol: PrivProtocol) -> &'static str {
+pub(super) fn priv_label(protocol: PrivProtocol) -> &'static str {
     match protocol {
         PrivProtocol::Des => "DES",
         PrivProtocol::Aes128 => "AES-128",

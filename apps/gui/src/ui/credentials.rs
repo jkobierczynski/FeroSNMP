@@ -6,8 +6,7 @@ use windows::Win32::Security::Credentials::{
 };
 use windows::core::{HSTRING, PWSTR};
 
-use crate::secrets::{self, Change};
-use crate::targets::SavedTarget;
+use crate::secrets::{self, Change, WithSecrets};
 
 /// The secret stored under `key`, or `None` when there is none (or it
 /// cannot be read).
@@ -77,13 +76,14 @@ fn write(key: &str, comment: &str, user: &str, secret: &str) -> Result<(), Strin
     result.map_err(|error| format!("cannot store {key} in the Credential Manager: {error}"))
 }
 
-/// Fill in the SNMPv3 passwords of saved agents from the Credential
-/// Manager.
-pub fn load_passwords(targets: &mut [SavedTarget]) {
-    secrets::fill(targets, read);
+/// Fill in the SNMPv3 passwords of saved agents or trap users from the
+/// Credential Manager.
+pub fn load_passwords<T: WithSecrets>(items: &mut [T]) {
+    secrets::fill(items, read);
 }
 
-/// Store the SNMPv3 passwords for the agents going from `old` to `new`.
-pub fn save_passwords(old: &[SavedTarget], new: &[SavedTarget]) -> Result<(), String> {
+/// Store the SNMPv3 passwords for the agents or trap users going from `old`
+/// to `new`.
+pub fn save_passwords<T: WithSecrets>(old: &[T], new: &[T]) -> Result<(), String> {
     apply(&secrets::changes(old, new))
 }

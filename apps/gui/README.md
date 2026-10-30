@@ -1,8 +1,9 @@
 # ferosnmp-gui
 
 The FeroSNMP window: browse the loaded MIBs as a tree, search them, see
-everything about a node, and query SNMP agents (GET, GETNEXT, GETBULK and
-WALK over SNMPv1, SNMPv2c and SNMPv3). Runs on Windows 10 and Windows 11.
+everything about a node, query SNMP agents (GET, GETNEXT, GETBULK, WALK,
+tables and SET over SNMPv1, SNMPv2c and SNMPv3), and receive traps and
+INFORMs. Runs on Windows 10 and Windows 11.
 
 ## Building and running
 
@@ -34,9 +35,11 @@ cargo run --release -p ferosnmp-gui --target-dir target\windows
 
 ## Using it
 
-- **File > Settings** sets the MIB folders (searched top to bottom, like
-  `-M` in the CLI), whether the net-snmp and libsmi folders on this computer
-  are used too, and the strictness. Settings are saved in
+- **File > Settings** has three tabs. **MIBs**: the MIB folders (searched
+  top to bottom, like `-M` in the CLI), whether the net-snmp and libsmi
+  folders on this computer are used too, and the strictness. **Traps**: see
+  [Traps](#traps) below. **Appearance**: light or dark tree and lists (see
+  [Dark mode](#dark-mode)). Settings are saved in
   `%APPDATA%\FeroSNMP\settings.toml`. Without any folders only the built-in
   modules (SNMPv2-SMI and friends) are loaded.
 - MIBs load in the background; the window stays usable and the status bar
@@ -47,7 +50,11 @@ cargo run --release -p ferosnmp-gui --target-dir target\windows
   such as `ifDescr.7`) or a pattern with `*` and `?` (`if*Octets`), then press
   **Enter**. **Enter** again or **F3** goes to the next match, **Shift+F3** to
   the previous one, **Esc** back to the tree.
-- Drag the bars between the panes to resize them.
+- Drag the bars between the panes to resize them. The window's position and
+  size, the panes' sizes and the tab shown along the bottom are remembered
+  when you close the window (in the `[layout]` part of `settings.toml`;
+  delete it to start over). A window that was on a monitor that is no longer
+  there opens on the main one.
 
 ### Querying an agent
 
@@ -142,6 +149,73 @@ cargo run --release -p snmp-core --example big_agent -- 100000 127.0.0.1:11162
 then type `127.0.0.1:11162` in the Agent box, `1.3.6.1.4.1.99999` in the
 Object box (three columns, so 300,000 values) and press **Walk**.
 
+### Traps
+
+The **Traps** tab receives SNMPv1, SNMPv2c and SNMPv3 traps and INFORMs,
+decoded with the loaded MIBs, as `ferosnmp traps listen` does (see
+[docs/traps.md](../../docs/traps.md)).
+
+- **Start listening** (the button above the list, **Traps > Start or stop
+  listening** or **Ctrl+L**) opens the trap port; the line next to the
+  filters says where it listens. Press it again to stop. To listen every
+  time the window opens, tick *Start listening when FeroSNMP opens* in
+  **Traps > Trap settings**.
+- Each notification is one row: the local time it arrived, the sender, the
+  version and whether it is a trap or an INFORM (INFORMs are acknowledged),
+  the notification's name, its severity, and its objects on one line. The
+  newest row stays in view unless you selected a row to read it.
+- **Enter** or a double click shows the whole notification in a window of
+  its own: community or SNMPv3 user and engine, uptime, the SNMPv1 fields,
+  every object with its type, and a hint to load the vendor's MIB for
+  anything no loaded MIB defines.
+- The four boxes above the list filter it as you type; each box that is
+  filled in must match, ignoring case:
+  - **From**: part of the sender's address (`192.0.2.`). An SNMPv1 trap is
+    also found by the agent address inside it.
+  - **Notification**: part of the name (`linkDown`, `Port`), a pattern
+    (`link*`, `IF-MIB::*`; with `*` the whole name must match) or an OID
+    prefix (`1.3.6.1.4.1.9`), as `ferosnmp traps listen --notification`.
+  - **Severity**: part of the severity text, such as `crit`. The severity
+    is the value of the first object whose name contains `severity`, as in
+    most vendor alarm MIBs (`ciscoEnvMonSeverity`, `alarmSeverity`);
+    notifications without one, such as linkDown, have none.
+  - **Any text**: anywhere in the notification, names and values included.
+  The tab title says how many are shown: `Traps (12 of 340)`.
+- The newest 10,000 notifications are kept; older ones are dropped as new
+  ones arrive. Reloading the MIBs decodes the ones kept again, so loading
+  a vendor's MIB afterwards names the traps already received.
+- **Ctrl+C** copies the selected rows; **Ctrl+F** searches the list.
+  Right-click for *Show details*, *Show in MIB tree* (the notification's
+  definition), *Export as CSV or JSON* and *Clear traps* (also in the
+  **Traps** menu). The export holds the rows the filters show; CSV has one
+  line per notification with the time in UTC, and JSON is an array of the
+  objects `ferosnmp traps listen --format json` writes.
+- Datagrams that are not notifications, and SNMPv3 messages that fail a
+  check (unknown user, wrong password), go to the **Log** tab with a hint.
+
+**Traps > Trap settings** (the Traps tab of File > Settings):
+
+- **Port** and **Address**: where to listen. Port 162 is the standard.
+  Windows' own *SNMP Trap* service may hold it; FeroSNMP then says so and
+  offers port 1162 instead. [docs/traps.md](../../docs/traps.md) shows how
+  to stop the service and open the Windows Firewall.
+- **SNMPv3 trap users**: SNMPv1 and v2c traps are accepted from anyone, but
+  an SNMPv3 sender needs a user here, with its security level, protocols
+  and passwords. Leave the engine ID empty to accept the user from any
+  sender, or give the sender's engine ID to accept it from that sender only
+  (net-snmp's `createUser -e`). **Import...** reads the `createUser` lines
+  of a `snmptrapd.conf`. The passwords go to the Windows Credential Manager
+  (as `FeroSNMP/trap-user/<name>`), never to `settings.toml`.
+- Changing the port or the users while listening listens again at once.
+
+### Dark mode
+
+**File > Settings > Appearance** makes the MIB tree, the details and the
+lists dark, as in Explorer, or follows the Windows setting (*Settings >
+Personalization > Colors > Choose your app mode*), which is the default.
+The title bar follows too. Menus, buttons, boxes and tabs stay light: the
+classic Windows controls have no dark mode.
+
 ### Diagnostics
 
 The **Diagnostics** tab at the bottom lists every problem found while
@@ -183,12 +257,15 @@ Bash), then add the repository's `corpus` folder in Settings.
 | `src/table.rs` | The Table tab: rows, cells, copying, CSV, and finding the table for the Object box. |
 | `src/set_value.rs` | What the Set value dialog shows and checks. |
 | `src/oplog.rs` | The Log tab. |
-| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, the Results, Table, Log and Diagnostics tabs, source and "why" windows, Settings, Agents and Set value dialogs. |
+| `src/traps.rs` | The Traps tab: the 10,000 newest notifications, filters, cells, copying, CSV and JSON. |
+| `src/trap_users.rs` | SNMPv3 trap users in the settings file. |
+| `src/secrets.rs` | Which passwords of agents and trap users to keep in the Credential Manager. |
+| `src/ui/` | The Win32 windows: main window, toolbar, tree, details, icons, the Results, Table, Traps, Log and Diagnostics tabs, source, "why" and trap windows, Settings, Trap user, Agents and Set value dialogs. |
 
 Everything outside `src/ui/` is plain Rust and is tested on every platform
 (`cargo test -p ferosnmp-gui`). The Win32 helpers that are not specific to
-SNMP (window classes, DPI, fonts, splitters, in-memory dialogs) are in the
-`fero-win32` crate.
+SNMP (window classes, DPI, fonts, splitters, in-memory and tabbed dialogs,
+dark tree and list views) are in the `fero-win32` crate.
 
 Win32 calls are `unsafe` in Rust because the compiler cannot check what
 Windows does with the pointers it is given; each `unsafe` block says why its
@@ -205,3 +282,8 @@ only when the handle's inbox was empty, and the window takes everything
 waiting in one go, at most every 50 ms. Posted messages come before
 painting in a Win32 message queue, so taking results any faster would
 leave the list no time to paint them during a fast walk.
+
+The trap receiver runs on the same thread: `QueryWorker::listen` starts the
+`trap-rx` listener there and hands back a feed with the same kind of inbox,
+which posts `WM_APP_TRAPS`; during a trap storm the window takes traps at
+most every 100 ms.

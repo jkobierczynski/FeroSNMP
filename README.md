@@ -30,13 +30,14 @@ runs on Linux and macOS.
 - **Tables and SET**: a table view that splits each row's instance by the
   table's INDEX into real columns, and SET with the value built from the
   MIB type and checked against its enums, ranges and sizes.
-- **Trap and INFORM receiver**: `ferosnmp traps listen` receives SNMPv1,
-  SNMPv2c and SNMPv3 traps and INFORMs, acknowledges INFORMs, and decodes
-  each notification against the loaded MIBs, with a hint to load the
-  vendor's MIB for anything unknown. Text or JSON Lines output, with
-  filters. See [docs/traps.md](docs/traps.md).
-- **Planned for 1.0**: a Traps tab in the window. See
-  [ROADMAP.md](ROADMAP.md).
+- **Trap and INFORM receiver**: the **Traps** tab and `ferosnmp traps
+  listen` receive SNMPv1, SNMPv2c and SNMPv3 traps and INFORMs, acknowledge
+  INFORMs, and decode each notification against the loaded MIBs, with a
+  hint to load the vendor's MIB for anything unknown. Filter by sender,
+  notification, severity or any text; export as CSV or JSON. See
+  [docs/traps.md](docs/traps.md).
+- **Comfortable**: dark tree and lists when Windows is in dark mode, and
+  the window opens the way you left it.
 
 The window runs on Windows 10 and 11. The command-line tool builds on Windows,
 Linux and macOS.

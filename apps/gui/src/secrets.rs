@@ -1,15 +1,19 @@
-//! SNMPv3 passwords of saved agents, kept out of `settings.toml`.
+//! SNMPv3 passwords of saved agents and trap users, kept out of
+//! `settings.toml`.
 //!
 //! On Windows they are generic credentials in the Credential Manager
 //! (Control Panel > Credential Manager > Windows Credentials), one per
-//! password, named `FeroSNMP/<agent name>/auth` and `.../priv` and stored
-//! for the current user on this computer. The Win32 calls are in
+//! password, stored for the current user on this computer. An agent's are
+//! named `FeroSNMP/<agent name>/auth` and `.../priv`; a trap user's
+//! `FeroSNMP/trap-user/<user>/auth`, with `@<engine ID>` after the user when
+//! the user belongs to one sender. The Win32 calls are in
 //! `ui/credentials.rs`; this module decides what to write and delete, so
 //! that part is tested on every platform.
 
 use crate::targets::{SavedTarget, VersionSetting};
+use crate::trap_users::SavedTrapUser;
 
-/// Which password of an agent.
+/// Which password.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     /// The authentication password.
@@ -35,26 +39,82 @@ impl Kind {
             Kind::Priv => "FeroSNMP: SNMPv3 privacy password",
         }
     }
+}
 
-    /// This password of a saved agent.
-    pub fn of(self, target: &SavedTarget) -> &str {
-        match self {
-            Kind::Auth => &target.auth_password,
-            Kind::Priv => &target.priv_password,
+/// Something with SNMPv3 passwords that live in the Credential Manager.
+pub trait WithSecrets {
+    /// The start of its credential names, or `None` when it has no
+    /// passwords (an agent that is not SNMPv3).
+    fn secret_prefix(&self) -> Option<String>;
+    /// The SNMPv3 user name, shown next to the password.
+    fn secret_user(&self) -> &str;
+    /// One of its passwords.
+    fn secret(&self, kind: Kind) -> &str;
+    /// One of its passwords, to fill in.
+    fn secret_mut(&mut self, kind: Kind) -> &mut String;
+}
+
+impl WithSecrets for SavedTarget {
+    fn secret_prefix(&self) -> Option<String> {
+        (self.version == VersionSetting::V3).then(|| format!("FeroSNMP/{}", self.name.trim()))
+    }
+
+    fn secret_user(&self) -> &str {
+        self.user.trim()
+    }
+
+    fn secret(&self, kind: Kind) -> &str {
+        match kind {
+            Kind::Auth => &self.auth_password,
+            Kind::Priv => &self.priv_password,
         }
     }
 
-    fn of_mut(self, target: &mut SavedTarget) -> &mut String {
-        match self {
-            Kind::Auth => &mut target.auth_password,
-            Kind::Priv => &mut target.priv_password,
+    fn secret_mut(&mut self, kind: Kind) -> &mut String {
+        match kind {
+            Kind::Auth => &mut self.auth_password,
+            Kind::Priv => &mut self.priv_password,
         }
     }
 }
 
-/// The credential name for one password of an agent.
-pub fn key(agent: &str, kind: Kind) -> String {
-    format!("FeroSNMP/{}/{}", agent.trim(), kind.suffix())
+impl WithSecrets for SavedTrapUser {
+    fn secret_prefix(&self) -> Option<String> {
+        let engine = self.engine_id.trim();
+        Some(if engine.is_empty() {
+            format!("FeroSNMP/trap-user/{}", self.name.trim())
+        } else {
+            format!(
+                "FeroSNMP/trap-user/{}@{}",
+                self.name.trim(),
+                engine.trim_start_matches("0x").to_lowercase()
+            )
+        })
+    }
+
+    fn secret_user(&self) -> &str {
+        self.name.trim()
+    }
+
+    fn secret(&self, kind: Kind) -> &str {
+        match kind {
+            Kind::Auth => &self.auth_password,
+            Kind::Priv => &self.priv_password,
+        }
+    }
+
+    fn secret_mut(&mut self, kind: Kind) -> &mut String {
+        match kind {
+            Kind::Auth => &mut self.auth_password,
+            Kind::Priv => &mut self.priv_password,
+        }
+    }
+}
+
+/// The credential name for one password of `item`.
+pub fn key(item: &impl WithSecrets, kind: Kind) -> Option<String> {
+    item.secret_prefix()
+        .map(|prefix| format!("{prefix}/{}", kind.suffix()))
 }
 
 /// A change to the stored passwords.
@@ -71,41 +131,41 @@ pub enum Change {
     Delete { key: String },
 }
 
-/// What to change when the saved agents go from `old` to `new`: write the
-/// passwords of every SNMPv3 agent in `new`, and delete the ones that are
-/// no longer needed (agents deleted, renamed, no longer SNMPv3, or with an
-/// emptied password).
-pub fn changes(old: &[SavedTarget], new: &[SavedTarget]) -> Vec<Change> {
+/// What to change when the saved items go from `old` to `new`: write the
+/// passwords of every item in `new` that has them, and delete the ones that
+/// are no longer needed (items deleted, renamed, no longer SNMPv3, or with
+/// an emptied password).
+pub fn changes<T: WithSecrets>(old: &[T], new: &[T]) -> Vec<Change> {
     let mut changes = Vec::new();
     let mut kept = Vec::new();
-    for target in new.iter().filter(|t| t.version == VersionSetting::V3) {
+    for item in new {
         for kind in Kind::ALL {
-            let secret = kind.of(target);
-            if secret.is_empty() {
+            let secret = item.secret(kind);
+            let Some(key) = key(item, kind).filter(|_| !secret.is_empty()) else {
                 continue;
-            }
-            let key = key(&target.name, kind);
+            };
             kept.push(key.clone());
             let unchanged = old.iter().any(|o| {
-                o.version == VersionSetting::V3
-                    && key == self::key(&o.name, kind)
-                    && kind.of(o) == secret
-                    && o.user == target.user
+                self::key(o, kind).as_ref() == Some(&key)
+                    && o.secret(kind) == secret
+                    && o.secret_user() == item.secret_user()
             });
             if !unchanged {
                 changes.push(Change::Write {
                     key,
                     kind,
-                    user: target.user.trim().to_string(),
+                    user: item.secret_user().to_string(),
                     secret: secret.to_string(),
                 });
             }
         }
     }
-    for target in old {
+    for item in old {
         for kind in Kind::ALL {
-            let key = key(&target.name, kind);
-            if !kind.of(target).is_empty() && !kept.contains(&key) {
+            if let Some(key) = key(item, kind)
+                && !item.secret(kind).is_empty()
+                && !kept.contains(&key)
+            {
                 changes.push(Change::Delete { key });
             }
         }
@@ -113,16 +173,13 @@ pub fn changes(old: &[SavedTarget], new: &[SavedTarget]) -> Vec<Change> {
     changes
 }
 
-/// Fill in the passwords of the SNMPv3 agents with `read`, which returns
-/// the secret stored under a key, if any.
-pub fn fill(targets: &mut [SavedTarget], mut read: impl FnMut(&str) -> Option<String>) {
-    for target in targets
-        .iter_mut()
-        .filter(|t| t.version == VersionSetting::V3)
-    {
+/// Fill in the passwords with `read`, which returns the secret stored under
+/// a key, if any.
+pub fn fill<T: WithSecrets>(items: &mut [T], mut read: impl FnMut(&str) -> Option<String>) {
+    for item in items {
         for kind in Kind::ALL {
-            if let Some(secret) = read(&key(&target.name, kind)) {
-                *kind.of_mut(target) = secret;
+            if let Some(secret) = key(item, kind).and_then(|key| read(&key)) {
+                *item.secret_mut(kind) = secret;
             }
         }
     }
@@ -182,6 +239,28 @@ mod tests {
                 "delete FeroSNMP/a/priv",
                 "delete FeroSNMP/b/auth",
             ]
+        );
+    }
+
+    #[test]
+    fn trap_users_have_their_own_names() {
+        let user = |name: &str, engine: &str| SavedTrapUser {
+            name: name.into(),
+            engine_id: engine.into(),
+            auth_password: "password1".into(),
+            ..SavedTrapUser::default()
+        };
+        let old = [user("admin", ""), user("admin", "0x80001F8804")];
+        assert_eq!(
+            keys(&changes(&[], &old)),
+            [
+                "write FeroSNMP/trap-user/admin/auth",
+                "write FeroSNMP/trap-user/admin@80001f8804/auth"
+            ]
+        );
+        assert_eq!(
+            keys(&changes(&old, &old[..1])),
+            ["delete FeroSNMP/trap-user/admin@80001f8804/auth"]
         );
     }
 

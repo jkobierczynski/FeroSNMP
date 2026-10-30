@@ -29,6 +29,8 @@ mod table;
 mod targets;
 #[cfg(test)]
 mod test_support;
+mod trap_users;
+mod traps;
 #[cfg(windows)]
 mod ui;
 
