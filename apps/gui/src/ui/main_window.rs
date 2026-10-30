@@ -45,8 +45,8 @@ use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    COLOR_WINDOW, GetSysColor, GetSysColorBrush, HDC, InvalidateRect, ScreenToClient, SetBkColor,
-    UpdateWindow,
+    COLOR_WINDOW, CreateSolidBrush, DeleteObject, GetSysColor, GetSysColorBrush, HBRUSH, HDC,
+    InvalidateRect, ScreenToClient, SetBkColor, SetTextColor, UpdateWindow,
 };
 use windows::Win32::UI::Controls::{
     HTREEITEM, LVHITTESTINFO, LVIS_SELECTED, LVM_SETEXTENDEDLISTVIEWSTYLE, LVM_SUBITEMHITTEST,
@@ -309,6 +309,10 @@ pub struct MainWindow {
     last_trap_take: Cell<Option<Instant>>,
     /// True while [`TRAP_TIMER`] runs.
     trap_timer_set: Cell<bool>,
+    /// True while the tree and lists are dark.
+    dark: Cell<bool>,
+    /// The background of the description in dark mode, once needed.
+    dark_brush: Cell<Option<HBRUSH>>,
 }
 
 impl MainWindow {
@@ -395,6 +399,8 @@ impl MainWindow {
             trap_window: RefCell::new(None),
             last_trap_take: Cell::new(None),
             trap_timer_set: Cell::new(false),
+            dark: Cell::new(false),
+            dark_brush: Cell::new(None),
         });
         match QueryWorker::start() {
             Ok(worker) => *window.worker.borrow_mut() = Some(worker),
@@ -3310,7 +3316,13 @@ impl MainWindow {
             .theme
             .is_dark(theme::apps_use_dark_mode());
         let controls = self.controls.get();
+        self.dark.set(dark);
         theme::set_title_bar_dark(self.hwnd(), dark);
+        // SAFETY: repainting our own control, which asks for its colours
+        // again (WM_CTLCOLORSTATIC).
+        unsafe {
+            let _ = InvalidateRect(Some(controls.description), None, true);
+        }
         theme::set_tree_dark(controls.tree, dark);
         for list in std::iter::once(controls.properties).chain(controls.panel.all_lists()) {
             theme::set_list_dark(list, dark);
@@ -3483,11 +3495,28 @@ impl Window for MainWindow {
                     || HWND(lparam.0 as *mut _) == self.controls.get().panel.trap_bar.state =>
             {
                 // A read-only edit box is grey by default; the description
-                // reads better on the normal window background.
-                // SAFETY: wparam is the control's device context.
+                // reads better on the normal window background, or the
+                // dark one next to a dark tree and list.
+                let hdc = HDC(wparam.0 as *mut _);
+                let description = HWND(lparam.0 as *mut _) == self.controls.get().description;
+                // SAFETY: wparam is the control's device context; the dark
+                // brush lives until the window is destroyed.
                 unsafe {
+                    if description && self.dark.get() {
+                        SetBkColor(hdc, theme::DARK_BACKGROUND);
+                        SetTextColor(hdc, theme::DARK_TEXT);
+                        let brush = match self.dark_brush.get() {
+                            Some(brush) => brush,
+                            None => {
+                                let brush = CreateSolidBrush(theme::DARK_BACKGROUND);
+                                self.dark_brush.set(Some(brush));
+                                brush
+                            }
+                        };
+                        return Some(LRESULT(brush.0 as isize));
+                    }
                     SetBkColor(
-                        HDC(wparam.0 as *mut _),
+                        hdc,
                         windows::Win32::Foundation::COLORREF(GetSysColor(COLOR_WINDOW)),
                     );
                     Some(LRESULT(GetSysColorBrush(COLOR_WINDOW).0 as isize))
@@ -3553,6 +3582,13 @@ impl Window for MainWindow {
             }
             WM_DESTROY => {
                 self.save_layout();
+                if let Some(brush) = self.dark_brush.take() {
+                    // SAFETY: the brush is ours and no control uses it any
+                    // more.
+                    unsafe {
+                        let _ = DeleteObject(brush.into());
+                    }
+                }
                 // Stop the query, the trap receiver and the engine's thread.
                 self.running.borrow_mut().take();
                 self.trap_feed.borrow_mut().take();

@@ -26,6 +26,12 @@ marked `(acknowledged)`. Datagrams that are not notifications, or SNMPv3
 messages that fail a check (unknown user, wrong password), are reported on
 standard error with a hint; `-q` hides them.
 
+The window has the same receiver in its **Traps** tab, with filters and
+CSV or JSON export; see [the GUI guide](../apps/gui/README.md#traps). Port
+162, the firewall and the test traps below are the same for both: in the
+window, set the port and SNMPv3 users in **Traps > Trap settings** instead
+of on the command line, and press **Start listening** (**Ctrl+L**).
+
 The rest of this page sets up the receiver on Windows and sends test traps
 from a Debian machine, first by hand with `snmptrap`, then from snmpd
 itself.

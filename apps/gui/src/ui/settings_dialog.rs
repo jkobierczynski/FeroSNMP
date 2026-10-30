@@ -1,4 +1,4 @@
-//! The Settings dialog: a property sheet with three pages.
+//! The Settings dialog: three pages on tabs.
 //!
 //! - **MIBs**: the MIB folders and how strictly they are read.
 //! - **Traps**: the port and address the Traps tab listens on, and the
@@ -9,7 +9,7 @@
 //! The pages edit one copy of the settings; it is returned when OK is
 //! pressed. A page that was never opened keeps its settings as they were.
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::path::Path;
 
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
@@ -79,7 +79,6 @@ pub fn show(
 ) -> Option<Settings> {
     let shared = Shared {
         settings: RefCell::new(settings.clone()),
-        ok: Cell::new(false),
     };
     let mibs = MibsPage {
         shared: &shared,
@@ -92,30 +91,31 @@ pub fn show(
     let appearance = AppearancePage { shared: &shared };
     let (mibs_template, traps_template, appearance_template) =
         (mibs_page(), traps_page(), appearance_page());
-    let pages: [(&DialogTemplate, &dyn Dialog); 3] = [
-        (&mibs_template, &mibs),
-        (&traps_template, &traps),
-        (&appearance_template, &appearance),
+    let pages: [(&str, &DialogTemplate, &dyn Dialog); 3] = [
+        ("MIBs", &mibs_template, &mibs),
+        ("Traps", &traps_template, &traps),
+        ("Appearance", &appearance_template, &appearance),
     ];
     let start = match start {
         Page::Mibs => 0,
         Page::Traps => 1,
     };
-    if let Err(error) = dialog::property_sheet(Some(owner), "Settings", &pages, start) {
-        error_box(
-            Some(owner),
-            &format!("The Settings dialog could not be opened.\n\n{error}"),
-        );
-        return None;
+    match dialog::tabbed_dialog(Some(owner), "Settings", &pages, start) {
+        Ok(true) => Some(shared.settings.into_inner()),
+        Ok(false) => None,
+        Err(error) => {
+            error_box(
+                Some(owner),
+                &format!("The Settings dialog could not be opened.\n\n{error}"),
+            );
+            None
+        }
     }
-    shared.ok.get().then(|| shared.settings.into_inner())
 }
 
 /// What the pages share: the settings as edited so far.
 struct Shared {
     settings: RefCell<Settings>,
-    /// Set when OK was pressed.
-    ok: Cell<bool>,
 }
 
 /// The notification code of a `WM_NOTIFY`.
@@ -139,7 +139,7 @@ fn button() -> WINDOW_STYLE {
 // ----- the MIBs page -----
 
 fn mibs_page() -> DialogTemplate {
-    DialogTemplate::page("MIBs", PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
+    DialogTemplate::page(PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
         .control(
             ControlClass::Static,
             "MIB &folders, searched from top to bottom:",
@@ -311,7 +311,6 @@ impl MibsPage<'_> {
                 send(item(hwnd, SYSTEM_FOLDERS), BM_GETCHECK, 0, 0).0 == BST_CHECKED.0 as isize;
         }
         settings.strictness = self.strictness(hwnd);
-        self.shared.ok.set(true);
     }
 
     fn add_folders(&self, hwnd: HWND) {
@@ -397,7 +396,7 @@ impl MibsPage<'_> {
 
 fn traps_page() -> DialogTemplate {
     let edit = style(ES_AUTOHSCROLL) | WS_TABSTOP | WS_BORDER;
-    DialogTemplate::page("Traps", PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
+    DialogTemplate::page(PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
         .control(
             ControlClass::Static,
             "Listen on UDP &port:",
@@ -530,7 +529,6 @@ impl Dialog for TrapsPage<'_> {
                 }
                 PSN_APPLY => {
                     self.store(hwnd);
-                    self.shared.ok.set(true);
                     Some(1)
                 }
                 _ => None,
@@ -727,7 +725,7 @@ impl TrapsPage<'_> {
 // ----- the Appearance page -----
 
 fn appearance_page() -> DialogTemplate {
-    DialogTemplate::page("Appearance", PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
+    DialogTemplate::page(PAGE_SIZE.0, PAGE_SIZE.1, "Segoe UI", 9)
         .control(
             ControlClass::Static,
             "&Tree and lists:",
@@ -777,7 +775,6 @@ impl Dialog for AppearancePage<'_> {
                 self.shared.settings.borrow_mut().theme = combo_selection(item(hwnd, THEME))
                     .and_then(|i| ThemeSetting::ALL.get(i).copied())
                     .unwrap_or_default();
-                self.shared.ok.set(true);
                 Some(1)
             }
             _ => None,

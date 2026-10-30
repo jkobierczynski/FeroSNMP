@@ -23,9 +23,9 @@ item; the issue lists the full scope. This file is the overview.
 | [M8: Table view and SET](https://github.com/jkobierczynski/FeroSNMP/issues/18) | Done | v0.3.0 |
 | **Phase 4: traps and 1.0** | | |
 | [M9: trap-rx receiver](https://github.com/jkobierczynski/FeroSNMP/issues/19) | Done | |
-| [M10: Trap UI](https://github.com/jkobierczynski/FeroSNMP/issues/20) | Next | v1.0.0 |
+| [M10: Trap UI and 1.0](https://github.com/jkobierczynski/FeroSNMP/issues/20) | Done | v1.0.0 |
 
-Status as of 2026-10-29. The issues are the live source; update this table
+Status as of 2026-10-30. The issues are the live source; update this table
 when a milestone closes.
 
 ## Phase 1: read-only MIB browser
@@ -95,4 +95,4 @@ features, and editing MIBs beyond showing diagnostics.
 | Pure-Rust crypto or OpenSSL | M7 | Decided: pure Rust (RustCrypto) |
 | Windows 10 and 11, or 11 only | M3 | Built for Windows 10 and 11 (manifest and docs) |
 | Commit older RFC MIBs or fetch them | M1 | Fetched by `corpus/fetch.sh` for now |
-| Publish `mib-core` and `snmp-core` on crates.io | M10 | Open; `publish = false` for now |
+| Publish `mib-core` and `snmp-core` on crates.io | M10 | Decided for 1.0: not published (`publish = false`). mib-core wraps a pre-1.0 mib-rs pinned to an exact version, so a public 1.0 API would freeze choices no outside user has tried. Revisit after 1.0; the names were still free on 2026-10-30 |

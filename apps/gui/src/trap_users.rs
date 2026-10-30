@@ -199,6 +199,14 @@ pub fn trap_users(saved: &[SavedTrapUser]) -> (Vec<TrapUser>, Vec<String>) {
     let mut users = Vec::new();
     let mut problems = Vec::new();
     for user in saved {
+        if user.security_level != SecurityLevel::NoAuthNoPriv && user.auth_password.is_empty() {
+            problems.push(format!(
+                "trap user {} is not used: its password is not in the Windows Credential \
+                 Manager; enter it in Traps > Trap settings",
+                user.name.trim()
+            ));
+            continue;
+        }
         match user.trap_user() {
             Ok(user) => users.push(user),
             Err(problem) => problems.push(format!(

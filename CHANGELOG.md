@@ -3,9 +3,52 @@
 All notable changes to FeroSNMP. Versions follow [Semantic Versioning](https://semver.org/);
 before 1.0, a minor version may change behaviour.
 
-## [Unreleased]
+## [1.0.0]
 
-### Trap and INFORM receiver
+The first stable release: every part of the v1 scope works. Traps and
+INFORMs arrive in the window and on the command line; the window gets a
+dark mode and remembers its layout.
+
+### Traps tab
+
+- The **Traps** tab receives SNMPv1, SNMPv2c and SNMPv3 traps and INFORMs
+  (**Start listening**, **Ctrl+L**) and shows each one as a row decoded
+  with the loaded MIBs: time, sender, version and kind, notification,
+  severity and objects. Enter or a double click shows the whole
+  notification with hints for objects no loaded MIB defines.
+- Filters above the list, applied as you type: sender address,
+  notification (name, pattern such as `link*`, or OID prefix), severity
+  text and any text. The severity is taken from the notification's
+  severity object, as vendor alarm MIBs have.
+- The newest 10,000 notifications are kept. Reloading the MIBs decodes
+  them again. Export the rows shown as CSV or JSON (the objects of
+  `ferosnmp traps listen --format json`); copy rows with Ctrl+C; search
+  them with Ctrl+F; show a notification's definition in the MIB tree.
+- Problems (not SNMP, unknown SNMPv3 user, wrong password) go to the Log
+  tab with a hint. When port 162 is taken (on Windows, usually by the SNMP
+  Trap service), the window says why and offers port 1162 instead.
+
+### Settings
+
+- **File > Settings** now has tabs: **MIBs** (as before), **Traps** and
+  **Appearance**. **Traps > Trap settings** opens the Traps tab directly.
+- Traps: the port and address to listen on, whether to start listening
+  when the window opens, and the SNMPv3 trap users, optionally bound to a
+  sender's engine ID. **Import...** reads the `createUser` lines of a
+  `snmptrapd.conf`. Trap users' passwords are kept in the Windows
+  Credential Manager, like those of saved agents.
+
+### Look and layout
+
+- Dark mode for the MIB tree, the details and every list (Explorer's dark
+  style), with a dark title bar. It follows the Windows app mode, or is
+  set to light or dark in **Settings > Appearance**. Other controls stay
+  light.
+- The window's position, size and maximized state, the sizes of the panes
+  and the tab shown are saved when the window closes and restored at the
+  next start, on the monitor it was on if that monitor is still there.
+
+### Trap and INFORM receiver (command line and library)
 
 - `ferosnmp traps listen` receives notifications on UDP port 162 (or
   `--port`) and prints each one decoded with the loaded MIBs: the
