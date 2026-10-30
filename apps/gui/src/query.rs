@@ -10,6 +10,10 @@
 //! the inbox was empty. The window then takes everything that has arrived
 //! in one go. However fast a walk streams, at most one message is waiting
 //! in the window's queue, and the window handles results in batches.
+//!
+//! The trap receiver of the Traps tab runs on the same thread:
+//! [`QueryWorker::listen`] starts a [`Listener`] there and hands back a
+//! [`TrapFeed`] with the same kind of inbox.
 
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
@@ -17,6 +21,8 @@ use std::thread;
 use snmp_core::{Engine, EngineConfig, Error, Event, Operation, Target};
 use tokio::runtime::{Builder, Handle};
 use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
+use trap_rx::{Incoming, Listener};
 
 /// The thread with the tokio runtime and the SNMP engine. Stops when
 /// dropped; running queries are cancelled then.
@@ -109,6 +115,87 @@ impl QueryWorker {
     }
 }
 
+impl QueryWorker {
+    /// Start receiving notifications on `listener`'s port. `notify` is
+    /// called on the worker thread when notifications are waiting in the
+    /// feed that were not there before. Dropping the feed closes the port.
+    pub fn listen(
+        &self,
+        listener: Listener,
+        notify: impl Fn() + Send + Sync + 'static,
+    ) -> std::io::Result<TrapFeed> {
+        let traps = {
+            // The listener's task and socket belong to the worker's runtime.
+            let _entered = self.runtime.enter();
+            listener.spawn()?
+        };
+        let inbox = Arc::new(Mutex::new(TrapInbox::default()));
+        let shared = inbox.clone();
+        let task = self.runtime.spawn(async move {
+            let mut traps = traps;
+            while let Some(incoming) = traps.next().await {
+                let mut inbox = lock(&shared);
+                if inbox.incoming.len() == TRAP_INBOX_LIMIT {
+                    // The window has not looked for a long time; it keeps
+                    // only the newest ones anyway.
+                    inbox.incoming.pop_front();
+                    inbox.dropped += 1;
+                }
+                inbox.incoming.push_back(incoming);
+                if !inbox.waiting {
+                    inbox.waiting = true;
+                    drop(inbox);
+                    notify();
+                }
+            }
+        });
+        Ok(TrapFeed { inbox, task })
+    }
+}
+
+/// How many notifications wait for the window at most: as many as the
+/// Traps tab keeps.
+const TRAP_INBOX_LIMIT: usize = crate::traps::LIMIT;
+
+#[derive(Debug, Default)]
+struct TrapInbox {
+    incoming: std::collections::VecDeque<Incoming>,
+    /// Notifications dropped because the inbox was full.
+    dropped: u64,
+    /// As in [`Inbox`].
+    waiting: bool,
+}
+
+/// A running trap receiver. Dropping it stops the receiver and closes its
+/// port.
+#[derive(Debug)]
+pub struct TrapFeed {
+    inbox: Arc<Mutex<TrapInbox>>,
+    task: JoinHandle<()>,
+}
+
+impl TrapFeed {
+    /// Everything received since the last call, in order, and how many
+    /// notifications had to be dropped because the window did not take
+    /// them in time.
+    pub fn take(&self) -> (Vec<Incoming>, u64) {
+        let mut inbox = lock(&self.inbox);
+        inbox.waiting = false;
+        (
+            std::mem::take(&mut inbox.incoming).into(),
+            std::mem::take(&mut inbox.dropped),
+        )
+    }
+}
+
+impl Drop for TrapFeed {
+    fn drop(&mut self) {
+        // Aborting the task drops the listener, which stops its own task
+        // and closes the socket.
+        self.task.abort();
+    }
+}
+
 impl Drop for QueryWorker {
     fn drop(&mut self) {
         if let Some(stop) = self.stop.take() {
@@ -128,7 +215,7 @@ struct Inbox {
     waiting: bool,
 }
 
-fn lock(inbox: &Mutex<Inbox>) -> MutexGuard<'_, Inbox> {
+fn lock<T>(inbox: &Mutex<T>) -> MutexGuard<'_, T> {
     // A panic while holding the lock leaves the events intact.
     inbox
         .lock()
@@ -271,5 +358,42 @@ mod tests {
         }
         drop(queries);
         drop(worker); // stops the thread without hanging
+    }
+
+    #[test]
+    fn traps_arrive_in_the_feed() {
+        use snmp_core::NotificationReceiver;
+        let worker = QueryWorker::start().unwrap();
+        let listener = Listener::bind(
+            "127.0.0.1:0".parse().unwrap(),
+            NotificationReceiver::new(vec![]),
+        )
+        .unwrap();
+        let address = listener.local_addr().unwrap();
+        let (notify, wake) = notifier();
+        let feed = worker.listen(listener, notify).unwrap();
+        let sender = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let datagram = crate::test_support::recorded("v2c-port-change");
+        sender.send_to(&datagram, address).unwrap();
+        sender.send_to(b"not SNMP", address).unwrap();
+        let mut incoming = Vec::new();
+        while incoming.len() < 2 {
+            wake.recv_timeout(Duration::from_secs(30))
+                .expect("the worker notifies");
+            incoming.extend(feed.take().0);
+        }
+        assert!(
+            matches!(incoming[0], Incoming::Notification(_)),
+            "{incoming:?}"
+        );
+        assert!(matches!(incoming[1], Incoming::Problem(_)), "{incoming:?}");
+
+        // Dropping the feed closes the port, so it can be opened again.
+        drop(feed);
+        let again = (0..50).find_map(|_| {
+            std::thread::sleep(Duration::from_millis(20));
+            Listener::bind(address, NotificationReceiver::new(vec![])).ok()
+        });
+        assert!(again.is_some(), "the port was not closed");
     }
 }

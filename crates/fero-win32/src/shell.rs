@@ -6,8 +6,9 @@ use windows::Win32::Foundation::{ERROR_CANCELLED, HWND};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, CoTaskMemFree};
 use windows::Win32::UI::Shell::Common::COMDLG_FILTERSPEC;
 use windows::Win32::UI::Shell::{
-    FOS_ALLOWMULTISELECT, FOS_FORCEFILESYSTEM, FOS_OVERWRITEPROMPT, FOS_PICKFOLDERS,
-    FileOpenDialog, FileSaveDialog, IFileOpenDialog, IFileSaveDialog, SIGDN_FILESYSPATH,
+    FOS_ALLOWMULTISELECT, FOS_FILEMUSTEXIST, FOS_FORCEFILESYSTEM, FOS_OVERWRITEPROMPT,
+    FOS_PICKFOLDERS, FileOpenDialog, FileSaveDialog, IFileOpenDialog, IFileSaveDialog,
+    SIGDN_FILESYSPATH,
 };
 use windows::core::HSTRING;
 
@@ -89,6 +90,48 @@ pub fn save_file(
         if !specs.is_empty() {
             dialog.SetFileTypes(&specs)?;
             dialog.SetDefaultExtension(&HSTRING::from(types[0].extension))?;
+        }
+        if let Err(error) = dialog.Show(owner) {
+            if error.code() == ERROR_CANCELLED.to_hresult() {
+                return Ok(None);
+            }
+            return Err(error);
+        }
+        let name = dialog.GetResult()?.GetDisplayName(SIGDN_FILESYSPATH)?;
+        let path = name.to_string();
+        CoTaskMemFree(Some(name.0 as *const _));
+        Ok(Some(PathBuf::from(path?)))
+    }
+}
+
+/// Show the "Open" dialog for one existing file and return it, or `None` if
+/// the user cancelled.
+///
+/// COM must be initialised on this thread, as for [`pick_folders`].
+pub fn open_file(
+    owner: Option<HWND>,
+    title: &str,
+    types: &[FileType<'_>],
+) -> windows::core::Result<Option<PathBuf>> {
+    let names: Vec<HSTRING> = types.iter().map(|t| HSTRING::from(t.name)).collect();
+    let patterns: Vec<HSTRING> = types.iter().map(|t| HSTRING::from(t.pattern)).collect();
+    let specs: Vec<COMDLG_FILTERSPEC> = names
+        .iter()
+        .zip(&patterns)
+        .map(|(name, pattern)| COMDLG_FILTERSPEC {
+            pszName: windows::core::PCWSTR(name.as_ptr()),
+            pszSpec: windows::core::PCWSTR(pattern.as_ptr()),
+        })
+        .collect();
+    // SAFETY: as in `save_file`.
+    unsafe {
+        let dialog: IFileOpenDialog =
+            CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
+        let options = dialog.GetOptions()?;
+        dialog.SetOptions(options | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST)?;
+        dialog.SetTitle(&HSTRING::from(title))?;
+        if !specs.is_empty() {
+            dialog.SetFileTypes(&specs)?;
         }
         if let Err(error) = dialog.Show(owner) {
             if error.code() == ERROR_CANCELLED.to_hresult() {

@@ -10,15 +10,24 @@
 //! an eighth of the character height vertically. Windows also rescales the
 //! dialog when it moves between monitors with different DPI, so dialogs need
 //! no DPI code of their own.
+//!
+//! [`property_sheet`] shows several templates made with
+//! [`DialogTemplate::page`] as the tabs of one Settings-style dialog.
 
 use std::cell::Cell;
 
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{
-    DLGTEMPLATE, DS_MODALFRAME, DS_SETFONT, DialogBoxIndirectParamW, GWLP_USERDATA,
-    GetWindowLongPtrW, SetWindowLongPtrW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_INITDIALOG, WS_CAPTION,
-    WS_CHILD, WS_POPUP, WS_SYSMENU, WS_VISIBLE,
+use windows::Win32::UI::Controls::{
+    PROPSHEETHEADERW_V2, PROPSHEETHEADERW_V2_1, PROPSHEETHEADERW_V2_2, PROPSHEETPAGEW,
+    PROPSHEETPAGEW_0, PSH_NOAPPLYNOW, PSH_NOCONTEXTHELP, PSH_PROPSHEETPAGE, PSP_DLGINDIRECT,
+    PropertySheetW,
 };
+use windows::Win32::UI::WindowsAndMessaging::{
+    DLGTEMPLATE, DS_MODALFRAME, DS_SETFONT, DWLP_MSGRESULT, DialogBoxIndirectParamW, GWLP_USERDATA,
+    GetWindowLongPtrW, SetWindowLongPtrW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_INITDIALOG, WS_CAPTION,
+    WS_CHILD, WS_DISABLED, WS_POPUP, WS_SYSMENU, WS_VISIBLE,
+};
+use windows::core::HSTRING;
 
 use crate::window::instance;
 
@@ -65,15 +74,32 @@ impl DialogTemplate {
     /// A dialog with a title bar and close button, `width` by `height` dialog
     /// units, in the given font (`"Segoe UI"`, 9 points matches Windows).
     pub fn new(title: &str, width: i16, height: i16, font: &str, points: u16) -> Self {
-        let mut template = DialogTemplate {
-            words: Vec::new(),
-            count_at: 0,
-        };
         let style = WS_POPUP
             | WS_CAPTION
             | WS_SYSMENU
             | WINDOW_STYLE(DS_MODALFRAME as u32)
             | WINDOW_STYLE(DS_SETFONT as u32);
+        Self::with_style(style, title, width, height, font, points)
+    }
+
+    /// A page of a [`property_sheet`]: `title` is the text of its tab.
+    pub fn page(title: &str, width: i16, height: i16, font: &str, points: u16) -> Self {
+        let style = WS_CHILD | WS_DISABLED | WS_CAPTION | WINDOW_STYLE(DS_SETFONT as u32);
+        Self::with_style(style, title, width, height, font, points)
+    }
+
+    fn with_style(
+        style: WINDOW_STYLE,
+        title: &str,
+        width: i16,
+        height: i16,
+        font: &str,
+        points: u16,
+    ) -> Self {
+        let mut template = DialogTemplate {
+            words: Vec::new(),
+            count_at: 0,
+        };
         template.push(1); // dlgVer
         template.push(0xFFFF); // signature: this is a DLGTEMPLATEEX
         template.push_u32(0); // helpID
@@ -131,12 +157,7 @@ impl DialogTemplate {
         owner: Option<HWND>,
         handler: &dyn Dialog,
     ) -> windows::core::Result<isize> {
-        // DialogBoxIndirectParamW needs the template on a 4-byte boundary; a
-        // Vec<u16> only guarantees 2, so copy it into u32s.
-        let mut aligned = vec![0u32; self.words.len().div_ceil(2)];
-        for (i, word) in self.words.iter().enumerate() {
-            aligned[i / 2] |= u32::from(*word) << (16 * (i % 2));
-        }
+        let aligned = self.aligned();
         // The handler is a wide pointer (`&dyn`), so pass a pointer to it.
         let handler_ref: &dyn Dialog = handler;
         let handler_ptr = Cell::new(&handler_ref as *const &dyn Dialog);
@@ -156,6 +177,16 @@ impl DialogTemplate {
         } else {
             Ok(result)
         }
+    }
+
+    /// The template on a 4-byte boundary, as Windows needs it; a Vec<u16>
+    /// only guarantees 2, so it is copied into u32s.
+    fn aligned(&self) -> Vec<u32> {
+        let mut aligned = vec![0u32; self.words.len().div_ceil(2)];
+        for (i, word) in self.words.iter().enumerate() {
+            aligned[i / 2] |= u32::from(*word) << (16 * (i % 2));
+        }
+        aligned
     }
 
     fn push(&mut self, word: u16) {
@@ -184,6 +215,104 @@ pub trait Dialog {
     fn message(&self, hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> Option<isize>;
 }
 
+/// Set the value a dialog returns for the message being handled, for
+/// notifications that want more than TRUE or FALSE: return `Some(1)` after
+/// calling it. A property page refuses to be left (`PSN_KILLACTIVE`) with
+/// `set_result(page, 1)`.
+pub fn set_result(hwnd: HWND, value: isize) {
+    // SAFETY: DWLP_MSGRESULT is the dialog's own result slot.
+    unsafe {
+        SetWindowLongPtrW(
+            hwnd,
+            windows::Win32::UI::WindowsAndMessaging::WINDOW_LONG_PTR_INDEX(DWLP_MSGRESULT as i32),
+            value,
+        );
+    }
+}
+
+/// `PSH_USESTARTPAGE`: open on the page `nStartPage` (not in the windows
+/// crate).
+const PSH_USESTARTPAGE: u32 = 0x0040;
+
+/// Show `pages` (made with [`DialogTemplate::page`]) as the tabs of a
+/// modal property sheet with OK and Cancel, opening on page `start`. Each
+/// page's handler gets the usual dialog messages, and `WM_NOTIFY` with
+/// `PSN_KILLACTIVE` when the user leaves it or presses OK (refuse with
+/// [`set_result`]), and `PSN_APPLY` when OK is pressed, but only if the page
+/// was shown: a page never opened never gets messages.
+///
+/// Returns once the sheet is closed. Whether OK was pressed is for the
+/// handlers to note on `PSN_APPLY`.
+pub fn property_sheet(
+    owner: Option<HWND>,
+    title: &str,
+    pages: &[(&DialogTemplate, &dyn Dialog)],
+    start: usize,
+) -> windows::core::Result<()> {
+    let templates: Vec<Vec<u32>> = pages
+        .iter()
+        .map(|(template, _)| template.aligned())
+        .collect();
+    // The handlers are wide pointers (`&dyn`); each page gets a pointer to
+    // one of them, which lives in this Vec until the sheet is closed.
+    let handlers: Vec<&dyn Dialog> = pages.iter().map(|(_, handler)| *handler).collect();
+    let mut sheet_pages: Vec<PROPSHEETPAGEW> = templates
+        .iter()
+        .zip(&handlers)
+        .map(|(template, handler)| PROPSHEETPAGEW {
+            dwSize: size_of::<PROPSHEETPAGEW>() as u32,
+            dwFlags: PSP_DLGINDIRECT,
+            hInstance: instance(),
+            Anonymous1: PROPSHEETPAGEW_0 {
+                pResource: template.as_ptr() as *mut DLGTEMPLATE,
+            },
+            pfnDlgProc: Some(page_proc),
+            lParam: LPARAM(handler as *const &dyn Dialog as isize),
+            ..Default::default()
+        })
+        .collect();
+    let caption = HSTRING::from(title);
+    let mut header = PROPSHEETHEADERW_V2 {
+        dwSize: size_of::<PROPSHEETHEADERW_V2>() as u32,
+        dwFlags: PSH_PROPSHEETPAGE | PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP | PSH_USESTARTPAGE,
+        hwndParent: owner.unwrap_or_default(),
+        hInstance: instance(),
+        pszCaption: windows::core::PCWSTR(caption.as_ptr()),
+        nPages: sheet_pages.len() as u32,
+        Anonymous2: PROPSHEETHEADERW_V2_1 {
+            nStartPage: start.min(pages.len().saturating_sub(1)) as u32,
+        },
+        Anonymous3: PROPSHEETHEADERW_V2_2 {
+            ppsp: sheet_pages.as_mut_ptr(),
+        },
+        ..Default::default()
+    };
+    // SAFETY: every pointer in the header and pages points into `caption`,
+    // `templates`, `handlers` or `sheet_pages`, which outlive the modal
+    // loop; PropertySheetW only returns once the sheet is gone.
+    let result = unsafe { PropertySheetW(&mut header) };
+    if result < 0 {
+        Err(windows::core::Error::from_thread())
+    } else {
+        Ok(())
+    }
+}
+
+/// The dialog procedure of a property page: like [`dialog_proc`], but the
+/// handler arrives inside the page's `PROPSHEETPAGEW`.
+unsafe extern "system" fn page_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> isize {
+    // SAFETY: for WM_INITDIALOG, lparam points to the page's copy of its
+    // PROPSHEETPAGEW, whose lParam is the handler pointer set up by
+    // `property_sheet`; that pointer lives until the sheet is closed.
+    unsafe {
+        if msg == WM_INITDIALOG {
+            let page = &*(lparam.0 as *const PROPSHEETPAGEW);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, page.lParam.0);
+        }
+        dispatch(hwnd, msg, wparam, lparam)
+    }
+}
+
 unsafe extern "system" fn dialog_proc(
     hwnd: HWND,
     msg: u32,
@@ -196,6 +325,18 @@ unsafe extern "system" fn dialog_proc(
         if msg == WM_INITDIALOG {
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, lparam.0);
         }
+        dispatch(hwnd, msg, wparam, lparam)
+    }
+}
+
+/// Hand a message to the handler stored in `GWLP_USERDATA`.
+///
+/// # Safety
+///
+/// `GWLP_USERDATA` is 0 or a pointer to a `&dyn Dialog` that is still alive.
+unsafe fn dispatch(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> isize {
+    // SAFETY: passed on to the caller.
+    unsafe {
         let slot = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const &dyn Dialog;
         if slot.is_null() {
             return 0;

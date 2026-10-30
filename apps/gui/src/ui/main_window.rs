@@ -31,7 +31,12 @@
 //! arrive as `WM_APP_QUERY` messages and are appended to the Results list
 //! (and for Table, to the Table list) while the window stays responsive.
 //! Set value opens the [`set_dialog`], and sends what it builds the same
-//! way.
+//! way. The trap receiver runs on that thread too; what it receives arrives
+//! as `WM_APP_TRAPS` messages and goes into the Traps tab.
+//!
+//! The tree and the lists follow the light or dark setting (see
+//! [`fero_win32::theme`]), and the window's position, the panes' sizes and
+//! the tab shown are kept in the settings file when the window closes.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -59,22 +64,25 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::Shell::{DragAcceptFiles, DragFinish, DragQueryFileW, HDROP};
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CheckMenuItem, CreateMenu, CreatePopupMenu, CreateWindowExW, DestroyMenu,
-    DestroyWindow, ES_AUTOVSCROLL, ES_MULTILINE, ES_READONLY, GetClientRect, GetCursorPos, GetMenu,
-    GetParent, GetWindowRect, HMENU, HTCLIENT, IDC_SIZENS, IDC_SIZEWE, KillTimer, LoadCursorW,
-    MB_ICONINFORMATION, MB_OK, MF_BYCOMMAND, MF_CHECKED, MF_GRAYED, MF_POPUP, MF_SEPARATOR,
-    MF_STRING, MF_UNCHECKED, MINMAXINFO, MessageBoxW, PostMessageW, PostQuitMessage, SW_SHOW,
-    SWP_NOACTIVATE, SWP_NOCOPYBITS, SWP_NOZORDER, SendMessageW, SetCursor, SetTimer, SetWindowPos,
-    SetWindowTextW, ShowWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WINDOW_EX_STYLE,
-    WINDOW_STYLE, WM_ACTIVATEAPP, WM_CAPTURECHANGED, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_COPY,
-    WM_CREATE, WM_CTLCOLORSTATIC, WM_DESTROY, WM_DPICHANGED, WM_DROPFILES, WM_GETMINMAXINFO,
-    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NOTIFY, WM_SETCURSOR, WM_SETREDRAW,
-    WM_SETTINGCHANGE, WM_SIZE, WM_TIMER, WS_CHILD, WS_CLIPCHILDREN, WS_EX_CLIENTEDGE,
-    WS_EX_CONTROLPARENT, WS_OVERLAPPEDWINDOW, WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
+    DestroyWindow, EN_CHANGE, ES_AUTOVSCROLL, ES_MULTILINE, ES_READONLY, GetClientRect,
+    GetCursorPos, GetMenu, GetParent, GetWindowPlacement, GetWindowRect, HMENU, HTCLIENT,
+    IDC_SIZENS, IDC_SIZEWE, IDYES, KillTimer, LoadCursorW, MB_ICONINFORMATION, MB_ICONWARNING,
+    MB_OK, MB_YESNO, MF_BYCOMMAND, MF_CHECKED, MF_GRAYED, MF_POPUP, MF_SEPARATOR, MF_STRING,
+    MF_UNCHECKED, MINMAXINFO, MessageBoxW, PostMessageW, PostQuitMessage, SW_SHOW,
+    SW_SHOWMAXIMIZED, SW_SHOWNORMAL, SWP_NOACTIVATE, SWP_NOCOPYBITS, SWP_NOZORDER, SendMessageW,
+    SetCursor, SetTimer, SetWindowPlacement, SetWindowPos, SetWindowTextW, ShowWindow,
+    TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WINDOW_EX_STYLE, WINDOW_STYLE, WINDOWPLACEMENT,
+    WM_ACTIVATEAPP, WM_CAPTURECHANGED, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_COPY, WM_CREATE,
+    WM_CTLCOLORSTATIC, WM_DESTROY, WM_DPICHANGED, WM_DROPFILES, WM_GETMINMAXINFO, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_MOUSEMOVE, WM_NOTIFY, WM_SETCURSOR, WM_SETREDRAW, WM_SETTINGCHANGE, WM_SIZE,
+    WM_TIMER, WS_CHILD, WS_CLIPCHILDREN, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT,
+    WS_OVERLAPPEDWINDOW, WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{HSTRING, w};
 
 use mib_core::{Diagnostic, MibSet, NodeId, NodeKind, Oid, SourceView};
-use snmp_core::{Error, Event, ObjectError, Operation, Value};
+use snmp_core::{Error, Event, NotificationReceiver, ObjectError, Operation, Value, hex};
+use trap_rx::{Incoming, Listener, UNPRIVILEGED_PORT};
 
 use fero_win32::font::Font;
 use fero_win32::shell::{self, FileType};
@@ -89,29 +97,29 @@ use crate::file_stamps::FileStamps;
 use crate::find::Matches;
 use crate::loading::{self, Loaded};
 use crate::oplog::{self, LogColumn, OpLog};
-use crate::query::{Query, QueryWorker};
+use crate::query::{Query, QueryWorker, TrapFeed};
 use crate::results::{Column, ResultList, count_text};
-use crate::settings::Settings;
+use crate::settings::{Layout, Settings};
 use crate::table::{TableList, find_table};
 use crate::targets::{self, Agent};
+use crate::trap_users;
+use crate::traps::{self, TrapColumn, TrapList};
 use crate::{VERSION, diagnostics, node_info, rich_text};
 
+use super::bottom_panel::TrapBar;
 use super::bottom_panel::{self, BottomPanel, Tab};
 use super::icons::{NodeIcons, image_for};
 use super::text_window::{Content, TextWindow};
 use super::toolbar::Toolbar;
 use super::{
-    WM_APP_LOADED, WM_APP_QUERY, agents_dialog, credentials, details, error_box, id, send,
-    set_dialog, settings_dialog, tree,
+    WM_APP_LOADED, WM_APP_QUERY, WM_APP_TRAPS, agents_dialog, credentials, details, error_box, id,
+    send, set_dialog, settings_dialog, tree,
 };
 use set_dialog::SetRequest;
 
-/// Sizes at 96 DPI.
+/// Sizes at 96 DPI. The panes' first sizes are in [`Layout::default`].
 const WINDOW_SIZE: (i32, i32) = (1100, 720);
 const MIN_SIZE: (i32, i32) = (520, 360);
-const TREE_WIDTH: i32 = 380;
-const PROPERTIES_HEIGHT: i32 = 280;
-const BOTTOM_HEIGHT: i32 = 250;
 const SPLITTER: i32 = 5;
 const MIN_PANE: i32 = 80;
 const COUNTS_WIDTH: i32 = 330;
@@ -122,6 +130,10 @@ const COUNTS_WIDTH: i32 = 330;
 const QUERY_REFRESH: Duration = Duration::from_millis(50);
 /// The timer that takes the results held back by [`QUERY_REFRESH`].
 const QUERY_TIMER: usize = 1;
+/// How often the Traps list is updated at most during a trap storm.
+const TRAP_REFRESH: Duration = Duration::from_millis(100);
+/// The timer that takes the traps held back by [`TRAP_REFRESH`].
+const TRAP_TIMER: usize = 2;
 
 /// The window handles of the controls in the window.
 #[derive(Debug, Clone, Copy, Default)]
@@ -142,6 +154,7 @@ enum Focus {
     Properties,
     Results,
     Table,
+    Traps,
     Log,
     Diagnostics,
 }
@@ -225,6 +238,10 @@ pub struct MainWindow {
 
     settings: RefCell<Settings>,
     settings_path: Option<PathBuf>,
+    /// False when the settings file could not be read at startup: then the
+    /// layout is not written over it when the window closes (saving
+    /// settings on purpose still replaces it, as the message says).
+    settings_read: bool,
     /// A problem reading the settings file at startup, shown once the window
     /// is open.
     settings_error: RefCell<Option<String>>,
@@ -281,6 +298,17 @@ pub struct MainWindow {
     last_take: Cell<Option<Instant>>,
     /// True while [`QUERY_TIMER`] runs.
     timer_set: Cell<bool>,
+
+    /// The Traps tab.
+    traps: RefCell<TrapList>,
+    /// The trap receiver, while listening.
+    trap_feed: RefCell<Option<TrapFeed>>,
+    /// The details of a trap, once opened.
+    trap_window: RefCell<Option<Rc<TextWindow>>>,
+    /// When traps were last taken from the receiver.
+    last_trap_take: Cell<Option<Instant>>,
+    /// True while [`TRAP_TIMER`] runs.
+    trap_timer_set: Cell<bool>,
 }
 
 impl MainWindow {
@@ -299,6 +327,9 @@ impl MainWindow {
             None => (Settings::default(), None),
         };
         credentials::load_passwords(&mut settings.targets);
+        credentials::load_passwords(&mut settings.trap_users);
+        let settings_read = settings_error.is_none();
+        let layout = settings.layout.clone().unwrap_or_default();
 
         let dpi = dpi::for_system();
         let window = Rc::new(MainWindow {
@@ -310,20 +341,20 @@ impl MainWindow {
             icons: RefCell::new(None),
             tree_split: RefCell::new(Splitter::new(
                 Orientation::Vertical,
-                dpi::scale(TREE_WIDTH, dpi),
+                dpi::scale(layout.tree_width.max(MIN_PANE), dpi),
                 dpi::scale(SPLITTER, dpi),
                 dpi::scale(MIN_PANE, dpi),
             )),
             details_split: RefCell::new(Splitter::new(
                 Orientation::Horizontal,
-                dpi::scale(PROPERTIES_HEIGHT, dpi),
+                dpi::scale(layout.details_height.max(MIN_PANE), dpi),
                 dpi::scale(SPLITTER, dpi),
                 dpi::scale(MIN_PANE, dpi),
             )),
             bottom_split: RefCell::new(
                 Splitter::new(
                     Orientation::Horizontal,
-                    dpi::scale(BOTTOM_HEIGHT, dpi),
+                    dpi::scale(layout.bottom_height.max(MIN_PANE), dpi),
                     dpi::scale(SPLITTER, dpi),
                     dpi::scale(MIN_PANE, dpi),
                 )
@@ -332,6 +363,7 @@ impl MainWindow {
             dragging: Cell::new(None),
             settings: RefCell::new(settings),
             settings_path,
+            settings_read,
             settings_error: RefCell::new(settings_error),
             mibs: RefCell::new(None),
             items: RefCell::new(Vec::new()),
@@ -358,6 +390,11 @@ impl MainWindow {
             clicked_column: Cell::new(0),
             last_take: Cell::new(None),
             timer_set: Cell::new(false),
+            traps: RefCell::new(TrapList::default()),
+            trap_feed: RefCell::new(None),
+            trap_window: RefCell::new(None),
+            last_trap_take: Cell::new(None),
+            trap_timer_set: Cell::new(false),
         });
         match QueryWorker::start() {
             Ok(worker) => *window.worker.borrow_mut() = Some(worker),
@@ -390,11 +427,45 @@ impl MainWindow {
         self.hwnd.get()
     }
 
-    /// Show the window and start loading MIBs.
+    /// Show the window where it was last closed, start loading MIBs, and
+    /// start listening for traps if the settings say so.
     pub fn start(&self) {
-        // SAFETY: showing our own window.
+        let layout = self.settings.borrow().layout.clone();
+        if let Some(tab) = layout
+            .as_ref()
+            .and_then(|layout| Tab::from_name(&layout.tab))
+        {
+            self.controls.get().panel.select_tab(tab);
+        }
+        // SAFETY: showing our own window. SetWindowPlacement moves a window
+        // that would be off every monitor (a monitor since unplugged) back
+        // onto one.
         unsafe {
-            let _ = ShowWindow(self.hwnd(), SW_SHOW);
+            match layout.filter(|layout| layout.width > 0 && layout.height > 0) {
+                Some(layout) => {
+                    let placement = WINDOWPLACEMENT {
+                        length: size_of::<WINDOWPLACEMENT>() as u32,
+                        showCmd: if layout.maximized {
+                            SW_SHOWMAXIMIZED.0 as u32
+                        } else {
+                            SW_SHOWNORMAL.0 as u32
+                        },
+                        rcNormalPosition: RECT {
+                            left: layout.x,
+                            top: layout.y,
+                            right: layout.x + layout.width,
+                            bottom: layout.y + layout.height,
+                        },
+                        ..Default::default()
+                    };
+                    if SetWindowPlacement(self.hwnd(), &placement).is_err() {
+                        let _ = ShowWindow(self.hwnd(), SW_SHOW);
+                    }
+                }
+                None => {
+                    let _ = ShowWindow(self.hwnd(), SW_SHOW);
+                }
+            }
             let _ = UpdateWindow(self.hwnd());
         }
         // Take the message out first: the message box runs a message loop,
@@ -404,6 +475,9 @@ impl MainWindow {
             error_box(Some(self.hwnd()), &message);
         }
         self.start_load();
+        if self.settings.borrow().listen_at_start {
+            self.start_listening();
+        }
     }
 
     // ----- creating and laying out the controls -----
@@ -468,6 +542,9 @@ impl MainWindow {
             id::STATUS,
         )?;
         let panel = BottomPanel::create(hwnd, dpi)?;
+        panel
+            .trap_bar
+            .set_listening(false, "Not listening (Ctrl+L starts)");
 
         // SAFETY: plain control messages and theme calls on our own controls.
         unsafe {
@@ -500,6 +577,7 @@ impl MainWindow {
         });
         *self.font.borrow_mut() = Some(font);
         self.apply_dpi_resources()?;
+        self.apply_theme();
         // SAFETY: plain control message, and accepting files dropped from
         // Explorer (they arrive as WM_DROPFILES).
         unsafe {
@@ -513,19 +591,19 @@ impl MainWindow {
     /// to the controls. Used at creation and when the DPI changes.
     fn apply_dpi_resources(&self) -> windows::core::Result<()> {
         let dpi = self.dpi.get();
-        let controls = self.controls.get();
+        let mut controls = self.controls.get();
+        controls.panel.set_dpi(dpi);
+        self.controls.set(controls);
         let font = Font::message(dpi)?;
         for control in [
             controls.tree,
             controls.properties,
             controls.description,
             controls.status,
-            controls.panel.tabs,
-            controls.panel.results,
-            controls.panel.table,
-            controls.panel.log,
-            controls.panel.diagnostics,
-        ] {
+        ]
+        .into_iter()
+        .chain(controls.panel.controls())
+        {
             font.apply(control);
         }
 
@@ -889,6 +967,9 @@ impl MainWindow {
             .or_else(|| set.resolve("internet").map(|node| node.id()));
         self.results.borrow_mut().set_mibs(Some(set.clone()));
         self.table.borrow_mut().set_mibs(Some(set.clone()));
+        // Traps that arrived before are decoded again with the new MIBs.
+        self.traps.borrow_mut().set_mibs(Some(set.clone()));
+        self.refresh_traps(false);
         *self.mibs.borrow_mut() = Some(set);
         // The names in the Results and Table lists may have changed.
         // SAFETY: repainting our own controls.
@@ -896,6 +977,7 @@ impl MainWindow {
             let panel = self.controls.get().panel;
             let _ = InvalidateRect(Some(panel.results), None, true);
             let _ = InvalidateRect(Some(panel.table), None, true);
+            let _ = InvalidateRect(Some(panel.traps), None, true);
         }
 
         for item in &top_level {
@@ -1360,7 +1442,10 @@ impl MainWindow {
             return;
         };
         let query = window_text(toolbar.search);
-        if matches!(self.pane.get(), Focus::Results | Focus::Table) {
+        if matches!(
+            self.pane.get(),
+            Focus::Results | Focus::Table | Focus::Traps
+        ) {
             self.find_in_results(&query, backwards);
             return;
         }
@@ -1428,6 +1513,7 @@ impl MainWindow {
                 let back = match self.pane.get() {
                     Focus::Results => controls.panel.results,
                     Focus::Table => controls.panel.table,
+                    Focus::Traps => controls.panel.traps,
                     _ => controls.tree,
                 };
                 // SAFETY: moving the focus between our own controls.
@@ -1435,7 +1521,19 @@ impl MainWindow {
                     let _ = SetFocus(Some(back));
                 }
             }
+            // Enter in a trap filter box: on to the list.
+            id::ENTER if self.in_trap_filters(focus) => {
+                // SAFETY: moving the focus between our own controls.
+                unsafe {
+                    let _ = SetFocus(Some(controls.panel.traps));
+                }
+            }
             id::ESCAPE | id::CANCEL => self.cancel_query(),
+            id::LISTEN => self.toggle_listening(),
+            id::TRAP_DETAILS => self.show_trap_details(),
+            id::EXPORT_TRAPS => self.export_traps(),
+            id::CLEAR_TRAPS => self.clear_traps(),
+            id::TRAP_SETTINGS => self.edit_settings(settings_dialog::Page::Traps),
             id::GET => self.run(QueryKind::Get),
             id::NEXT => self.run(QueryKind::Next),
             id::BULK => self.run(QueryKind::Bulk),
@@ -1457,7 +1555,10 @@ impl MainWindow {
             id::EXPORT_RESULTS => self.export_results(),
             id::FIND => {
                 if let Some(search) = search {
-                    let hint = if matches!(self.pane.get(), Focus::Results | Focus::Table) {
+                    let hint = if matches!(
+                        self.pane.get(),
+                        Focus::Results | Focus::Table | Focus::Traps
+                    ) {
                         "Text in the results (Ctrl+F)"
                     } else {
                         "Name, OID or pattern such as if*Octets (Ctrl+F)"
@@ -1480,7 +1581,7 @@ impl MainWindow {
             id::FIND_NEXT => self.find(false),
             id::FIND_PREVIOUS => self.find(true),
             id::RELOAD => self.start_load(),
-            id::SETTINGS => self.edit_settings(),
+            id::SETTINGS => self.edit_settings(settings_dialog::Page::Mibs),
             id::EXIT => {
                 // SAFETY: closing our own window.
                 unsafe {
@@ -1507,14 +1608,21 @@ impl MainWindow {
         }
     }
 
-    fn edit_settings(&self) {
+    fn edit_settings(&self, page: settings_dialog::Page) {
         let current = self.settings.borrow().clone();
-        let Some(new) = settings_dialog::show(self.hwnd(), &current, self.settings_path.as_deref())
+        let Some(new) =
+            settings_dialog::show(self.hwnd(), &current, self.settings_path.as_deref(), page)
         else {
             return;
         };
         if new == current {
             return;
+        }
+        if let Err(error) = credentials::save_passwords(&current.trap_users, &new.trap_users) {
+            error_box(
+                Some(self.hwnd()),
+                &format!("The trap users' passwords could not all be saved.\n\n{error}"),
+            );
         }
         if let Some(path) = &self.settings_path
             && let Err(error) = new.save(path)
@@ -1524,8 +1632,25 @@ impl MainWindow {
                 &format!("The settings could not be saved.\n\n{error}"),
             );
         }
+        let reload = new.mib_folders != current.mib_folders
+            || new.use_system_folders != current.use_system_folders
+            || new.strictness != current.strictness;
+        let relisten = new.trap_port != current.trap_port
+            || new.trap_address != current.trap_address
+            || new.trap_users != current.trap_users;
+        let retheme = new.theme != current.theme;
         *self.settings.borrow_mut() = new;
-        self.start_load();
+        if reload {
+            self.start_load();
+        }
+        if relisten && self.trap_feed.borrow().is_some() {
+            // Listen again with the new port and users.
+            self.stop_listening();
+            self.start_listening();
+        }
+        if retheme {
+            self.apply_theme();
+        }
     }
 
     // ----- queries -----
@@ -2139,7 +2264,11 @@ impl MainWindow {
     /// focus. With `column`, only that column of the selected results.
     fn copy(&self, focus: HWND, column: Option<usize>) {
         let controls = self.controls.get();
-        let text = if focus == controls.panel.results {
+        let text = if focus == controls.panel.traps {
+            self.traps
+                .borrow()
+                .tab_separated(bottom_panel::all_selected(focus))
+        } else if focus == controls.panel.results {
             let rows = bottom_panel::all_selected(focus);
             let results = self.results.borrow();
             match column.and_then(|c| Column::ALL.get(c)) {
@@ -2311,7 +2440,12 @@ impl MainWindow {
     /// text in that list.
     fn find_in_results(&self, query: &str, backwards: bool) {
         let panel = self.controls.get().panel;
-        let found = if self.pane.get() == Focus::Table {
+        let found = if self.pane.get() == Focus::Traps {
+            let traps = self.traps.borrow();
+            traps
+                .find(query, bottom_panel::selected(panel.traps), backwards)
+                .map(|row| (panel.traps, row, traps.len()))
+        } else if self.pane.get() == Focus::Table {
             let table = self.table.borrow();
             table
                 .find(query, bottom_panel::selected(panel.table), backwards)
@@ -2697,6 +2831,531 @@ impl MainWindow {
         bottom_panel::show_last(list, count);
     }
 
+    // ----- traps -----
+
+    /// True if `focus` is one of the filter boxes above the Traps list.
+    fn in_trap_filters(&self, focus: HWND) -> bool {
+        let bar = self.controls.get().panel.trap_bar;
+        [bar.source, bar.notification, bar.severity, bar.text].contains(&focus)
+    }
+
+    /// A filter box changed: show the traps that pass.
+    fn apply_trap_filter(&self) {
+        let filter = self.controls.get().panel.trap_bar.filter();
+        if *self.traps.borrow().filter() == filter {
+            return;
+        }
+        self.traps.borrow_mut().set_filter(filter);
+        self.refresh_traps(false);
+    }
+
+    /// Traps > Start or stop listening (Ctrl+L).
+    fn toggle_listening(&self) {
+        if self.trap_feed.borrow().is_some() {
+            self.stop_listening();
+        } else {
+            self.start_listening();
+        }
+    }
+
+    /// Open the trap port and start receiving on the engine's thread.
+    fn start_listening(&self) {
+        if self.trap_feed.borrow().is_some() {
+            return;
+        }
+        if let Some(problem) = self.worker_error.borrow().as_ref() {
+            error_box(Some(self.hwnd()), problem);
+            return;
+        }
+        let (address, users, problems) = {
+            let settings = self.settings.borrow();
+            let (users, problems) = trap_users::trap_users(&settings.trap_users);
+            (settings.trap_listen_address(), users, problems)
+        };
+        let address = match address {
+            Ok(address) => address,
+            Err(problem) => {
+                error_box(
+                    Some(self.hwnd()),
+                    &format!("{problem}\n\nChange it in Traps > Trap settings."),
+                );
+                return;
+            }
+        };
+        for problem in problems {
+            self.log_line("traps", format!("Note: {problem}"));
+        }
+        let user_count = users.len();
+        let listener = match Listener::bind(address, NotificationReceiver::new(users)) {
+            Ok(listener) => listener,
+            Err(error) => {
+                let mut message = format!("FeroSNMP {error}.");
+                if let Some(hint) = error.hint() {
+                    message.push_str(&format!("\n\nTo fix it: {hint}."));
+                }
+                self.log_line("traps", message.replace("\n\n", " "));
+                self.refresh_log();
+                self.set_status(
+                    "Not listening for traps: the port could not be opened (see the Log tab)",
+                );
+                if address.port() == trap_rx::TRAP_PORT {
+                    message.push_str(&format!(
+                        "\n\nListen on port {UNPRIVILEGED_PORT} instead? Senders must then send \
+                         their traps to port {UNPRIVILEGED_PORT}. (This changes the port in \
+                         Traps > Trap settings.)"
+                    ));
+                    // SAFETY: a message box owned by our window.
+                    let answer = unsafe {
+                        MessageBoxW(
+                            Some(self.hwnd()),
+                            &HSTRING::from(message),
+                            w!("FeroSNMP"),
+                            MB_YESNO | MB_ICONWARNING,
+                        )
+                    };
+                    if answer == IDYES {
+                        self.settings.borrow_mut().trap_port = UNPRIVILEGED_PORT;
+                        self.save_settings();
+                        self.start_listening();
+                    }
+                } else {
+                    error_box(Some(self.hwnd()), &message);
+                }
+                return;
+            }
+        };
+        let local = listener.local_addr().map_or(address, |local| local);
+        let engine = hex(listener.engine_id());
+        // A window handle is not `Send`, but the number inside it is; the
+        // engine's thread only uses it to post messages back.
+        let hwnd = self.hwnd().0 as isize;
+        let feed = {
+            let worker = self.worker.borrow();
+            let Some(worker) = worker.as_ref() else {
+                return;
+            };
+            worker.listen(listener, move || {
+                // SAFETY: PostMessageW may be called from any thread; a post
+                // to a window that is gone fails harmlessly.
+                unsafe {
+                    let _ = PostMessageW(
+                        Some(HWND(hwnd as *mut _)),
+                        WM_APP_TRAPS,
+                        WPARAM(0),
+                        LPARAM(0),
+                    );
+                }
+            })
+        };
+        match feed {
+            Ok(feed) => *self.trap_feed.borrow_mut() = Some(feed),
+            Err(error) => {
+                error_box(
+                    Some(self.hwnd()),
+                    &format!("The trap receiver could not be started.\n\n{error}"),
+                );
+                return;
+            }
+        }
+        let users = match user_count {
+            1 => "1 SNMPv3 user".to_string(),
+            n => format!("{n} SNMPv3 users"),
+        };
+        let state = format!("Listening on UDP {local}, {users}");
+        self.controls
+            .get()
+            .panel
+            .trap_bar
+            .set_listening(true, &state);
+        self.log_line(
+            "traps",
+            format!(
+                "Listening for traps and INFORMs on UDP {local}; SNMPv3 engine ID {engine}, {users}"
+            ),
+        );
+        self.refresh_log();
+        self.set_status(&state);
+    }
+
+    /// Close the trap port. The traps received stay in the list.
+    fn stop_listening(&self) {
+        if self.trap_feed.borrow_mut().take().is_none() {
+            return;
+        }
+        // SAFETY: stopping our own timer, if it runs.
+        unsafe {
+            let _ = KillTimer(Some(self.hwnd()), TRAP_TIMER);
+        }
+        self.trap_timer_set.set(false);
+        self.controls
+            .get()
+            .panel
+            .trap_bar
+            .set_listening(false, "Not listening (Ctrl+L starts)");
+        self.log_line("traps", "Stopped listening for traps".to_string());
+        self.refresh_log();
+        self.set_status("Stopped listening for traps");
+    }
+
+    /// WM_APP_TRAPS: traps are waiting. As for query results, they are
+    /// taken at most every [`TRAP_REFRESH`], so a trap storm leaves time to
+    /// paint.
+    fn on_trap_message(&self) {
+        let since = self.last_trap_take.get().map(|at| at.elapsed());
+        match since {
+            Some(since) if since < TRAP_REFRESH => {
+                if !self.trap_timer_set.replace(true) {
+                    let wait = (TRAP_REFRESH - since).as_millis().max(1) as u32;
+                    // SAFETY: a timer on our own window; it arrives as
+                    // WM_TIMER.
+                    unsafe {
+                        SetTimer(Some(self.hwnd()), TRAP_TIMER, wait, None);
+                    }
+                }
+            }
+            _ => self.on_trap_events(),
+        }
+    }
+
+    /// WM_TIMER: take the traps held back.
+    fn on_trap_timer(&self) {
+        // SAFETY: stopping our own timer.
+        unsafe {
+            let _ = KillTimer(Some(self.hwnd()), TRAP_TIMER);
+        }
+        self.trap_timer_set.set(false);
+        self.on_trap_events();
+    }
+
+    /// Take the traps that are waiting and show them.
+    fn on_trap_events(&self) {
+        self.last_trap_take.set(Some(Instant::now()));
+        let (incoming, dropped) = match self.trap_feed.borrow().as_ref() {
+            Some(feed) => feed.take(),
+            None => return,
+        };
+        if incoming.is_empty() && dropped == 0 {
+            return;
+        }
+        let mut shifted = false;
+        let mut last = None;
+        let mut problems = false;
+        for item in incoming {
+            match item {
+                Incoming::Notification(received) => {
+                    let time = local_date_time(received.at);
+                    let source = received.source;
+                    let change = self.traps.borrow_mut().push(received, time);
+                    shifted |= change.dropped > 0;
+                    last = Some(source);
+                }
+                Incoming::Problem(problem) => {
+                    let mut text = format!("Not a trap: {}", problem.error);
+                    if let Some(hint) = problem.error.hint() {
+                        text.push_str(&format!(" (hint: {hint})"));
+                    }
+                    self.log_line(&problem.source.to_string(), text);
+                    problems = true;
+                }
+            }
+        }
+        if dropped > 0 {
+            self.log_line(
+                "traps",
+                format!("{dropped} traps arrived faster than the window could take them and were dropped"),
+            );
+            problems = true;
+        }
+        if problems {
+            self.refresh_log();
+        }
+        self.refresh_traps(!shifted);
+        if let Some(source) = last {
+            let name = {
+                let traps = self.traps.borrow();
+                traps
+                    .len()
+                    .checked_sub(1)
+                    .and_then(|row| traps.described(row))
+                    .filter(|described| described.source == source)
+                    .map(|described| described.name.clone())
+            };
+            if let Some(name) = name {
+                self.set_status(&format!("{name} from {source} at {}", local_time()));
+            }
+        }
+    }
+
+    /// Show the Traps list's rows and title again. With `growing`, rows were
+    /// only added at the end. The newest trap is kept in view unless a row is
+    /// selected, so a trap being read does not scroll away.
+    fn refresh_traps(&self, growing: bool) {
+        let panel = self.controls.get().panel;
+        let (count, title) = {
+            let traps = self.traps.borrow();
+            (traps.len(), traps.title())
+        };
+        bottom_panel::set_count(panel.traps, count, growing);
+        panel.set_title(Tab::Traps, &title);
+        if bottom_panel::selected(panel.traps).is_none() {
+            bottom_panel::show_last(panel.traps, count);
+        }
+    }
+
+    /// Show the selected trap with every object, in a window of its own.
+    fn show_trap_details(&self) {
+        let list = self.controls.get().panel.traps;
+        let Some(row) = bottom_panel::selected(list) else {
+            self.set_status("Select a trap in the Traps tab first.");
+            return;
+        };
+        let content = {
+            let traps = self.traps.borrow();
+            let (Some(described), Some(details)) = (traps.described(row), traps.details(row))
+            else {
+                return;
+            };
+            let mut header = format!(
+                "{} {} from {}",
+                traps::kind_title(described.kind),
+                described.name,
+                described.source
+            );
+            if let Some(hint) = described.hints.first() {
+                header.push_str(&format!("\nHint: {hint}"));
+            }
+            Content {
+                title: format!("{} \u{2014} FeroSNMP", described.name),
+                header,
+                rtf: rich_text::plain_rtf(&details),
+                caret: None,
+            }
+        };
+        if let Some(window) = self.text_window(&self.trap_window, "FeroSNMP.TrapWindow", false) {
+            window.show(&content, true);
+        }
+    }
+
+    /// Show the notification of the selected trap in the MIB tree.
+    fn show_trap_in_tree(&self) {
+        let list = self.controls.get().panel.traps;
+        let Some(oid) = bottom_panel::selected(list).and_then(|row| {
+            self.traps
+                .borrow()
+                .described(row)
+                .and_then(|described| described.oid.clone())
+        }) else {
+            return;
+        };
+        let target = {
+            let mibs = self.mibs.borrow();
+            mibs.as_ref()
+                .and_then(|set| set.node_at(&oid).map(|node| node.id()))
+        };
+        match target {
+            Some(id) => {
+                self.reveal(id);
+                // SAFETY: moving the focus to our own control.
+                unsafe {
+                    let _ = SetFocus(Some(self.controls.get().tree));
+                }
+            }
+            None => self.set_status(&format!(
+                "No loaded MIB defines {oid}; load the vendor's MIB to see it in the tree"
+            )),
+        }
+    }
+
+    /// Traps > Export: save the traps shown as CSV or JSON.
+    fn export_traps(&self) {
+        if self.traps.borrow().is_empty() {
+            self.set_status("There are no traps to export.");
+            return;
+        }
+        let types = [
+            FileType {
+                name: "CSV, for spreadsheets (*.csv)",
+                pattern: "*.csv",
+                extension: "csv",
+            },
+            FileType {
+                name: "JSON (*.json)",
+                pattern: "*.json",
+                extension: "json",
+            },
+        ];
+        let path = match shell::save_file(Some(self.hwnd()), "Export traps", "traps.csv", &types) {
+            Ok(Some(path)) => path,
+            Ok(None) => return,
+            Err(error) => {
+                error_box(
+                    Some(self.hwnd()),
+                    &format!("The Save dialog could not be opened.\n\n{error}"),
+                );
+                return;
+            }
+        };
+        let json = path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("json"));
+        let (text, count) = {
+            let traps = self.traps.borrow();
+            let text = if json { traps.json() } else { traps.csv() };
+            (text, traps.len())
+        };
+        match std::fs::write(&path, text) {
+            Ok(()) => self.set_status(&format!(
+                "{} traps saved to {}",
+                count_text(count),
+                path.display()
+            )),
+            Err(error) => error_box(
+                Some(self.hwnd()),
+                &format!("{} could not be written.\n\n{error}", path.display()),
+            ),
+        }
+    }
+
+    /// Traps > Clear: forget every trap received.
+    fn clear_traps(&self) {
+        self.traps.borrow_mut().clear();
+        self.refresh_traps(false);
+    }
+
+    /// WM_NOTIFY from the Traps list.
+    fn on_traps_notify(&self, code: u32, lparam: LPARAM) {
+        match code {
+            LVN_GETDISPINFOW => {
+                // SAFETY: as in on_results_notify.
+                let info = unsafe { &mut *(lparam.0 as *mut NMLVDISPINFOW) };
+                if let Some((row, column)) = bottom_panel::asked_cell(info)
+                    && let Some(&column) = TrapColumn::ALL.get(column)
+                {
+                    let text = self.traps.borrow().cell(row, column);
+                    bottom_panel::fill_cell(info, &text);
+                }
+            }
+            NM_SETFOCUS => self.pane.set(Focus::Traps),
+            LVN_ITEMACTIVATE => self.show_trap_details(),
+            LVN_KEYDOWN => select_all_on_ctrl_a(self.controls.get().panel.traps, lparam),
+            _ => {}
+        }
+    }
+
+    /// WM_CONTEXTMENU on the Traps list: the right-click menu.
+    fn traps_menu(&self, lparam: LPARAM) {
+        let list = self.controls.get().panel.traps;
+        let (point, _) = clicked_cell(list, lparam);
+        let selected = bottom_panel::selected(list).is_some();
+        let any = !self.traps.borrow().is_empty();
+        let listening = self.trap_feed.borrow().is_some();
+        // SAFETY: a popup menu we create, show and destroy here; the strings
+        // are copied by AppendMenuW.
+        let command = unsafe {
+            let Ok(menu) = CreatePopupMenu() else {
+                return;
+            };
+            let add = |id: u16, text: &str, enabled: bool| {
+                let flags = if enabled {
+                    MF_STRING
+                } else {
+                    MF_STRING | MF_GRAYED
+                };
+                let _ = AppendMenuW(menu, flags, usize::from(id), &HSTRING::from(text));
+            };
+            add(id::COPY, "&Copy\tCtrl+C", selected);
+            add(id::TRAP_DETAILS, "Show &details\tEnter", selected);
+            add(id::SHOW_IN_TREE, "Show in MIB &tree", selected);
+            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            add(id::EXPORT_TRAPS, "&Export as CSV or JSON\u{2026}", any);
+            add(id::CLEAR_TRAPS, "C&lear traps", any);
+            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            add(
+                id::LISTEN,
+                if listening {
+                    "Stop &listening\tCtrl+L"
+                } else {
+                    "Start &listening\tCtrl+L"
+                },
+                true,
+            );
+            let command = TrackPopupMenu(
+                menu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                point.x,
+                point.y,
+                None,
+                self.hwnd(),
+                None,
+            );
+            let _ = DestroyMenu(menu);
+            command.0 as u16
+        };
+        match command {
+            0 => {}
+            id::COPY => self.copy(list, None),
+            id::SHOW_IN_TREE => self.show_trap_in_tree(),
+            other => self.on_command(other),
+        }
+    }
+
+    // ----- light or dark, and the layout -----
+
+    /// Make the title bar, the tree and the lists light or dark, as the
+    /// settings and Windows say.
+    fn apply_theme(&self) {
+        let dark = self
+            .settings
+            .borrow()
+            .theme
+            .is_dark(theme::apps_use_dark_mode());
+        let controls = self.controls.get();
+        theme::set_title_bar_dark(self.hwnd(), dark);
+        theme::set_tree_dark(controls.tree, dark);
+        for list in std::iter::once(controls.properties).chain(controls.panel.all_lists()) {
+            theme::set_list_dark(list, dark);
+        }
+    }
+
+    /// Keep the window's position, the panes' sizes and the tab shown in
+    /// the settings file, for the next start.
+    fn save_layout(&self) {
+        let mut placement = WINDOWPLACEMENT {
+            length: size_of::<WINDOWPLACEMENT>() as u32,
+            ..Default::default()
+        };
+        // SAFETY: GetWindowPlacement fills the structure, whose length is
+        // set.
+        if unsafe { GetWindowPlacement(self.hwnd(), &mut placement) }.is_err() {
+            return;
+        }
+        let dpi = self.dpi.get().max(1) as i32;
+        let unscale = |pixels: i32| pixels * 96 / dpi;
+        let normal = placement.rcNormalPosition;
+        let layout = Layout {
+            x: normal.left,
+            y: normal.top,
+            width: normal.right - normal.left,
+            height: normal.bottom - normal.top,
+            maximized: placement.showCmd == SW_SHOWMAXIMIZED.0 as u32,
+            tree_width: unscale(self.tree_split.borrow().position()),
+            details_height: unscale(self.details_split.borrow().position()),
+            bottom_height: unscale(self.bottom_split.borrow().position()),
+            tab: self.controls.get().panel.current_tab().name().to_string(),
+        };
+        if self.settings.borrow().layout.as_ref() == Some(&layout) {
+            return;
+        }
+        self.settings.borrow_mut().layout = Some(layout);
+        // A settings file that could not be read is left for the user to
+        // fix, rather than replaced on the way out.
+        if self.settings_read
+            && let Some(path) = &self.settings_path
+        {
+            let _ = self.settings.borrow().save(path);
+        }
+    }
+
     // ----- status bar -----
 
     fn set_status(&self, text: &str) {
@@ -2770,7 +3429,14 @@ impl Window for MainWindow {
                 Some(LRESULT(0))
             }
             WM_COMMAND => {
-                self.on_command(loword(wparam.0));
+                let (command, code) = (loword(wparam.0), u32::from(hiword(wparam.0)));
+                if TrapBar::is_filter(command) {
+                    if code == EN_CHANGE {
+                        self.apply_trap_filter();
+                    }
+                } else {
+                    self.on_command(command);
+                }
                 Some(LRESULT(0))
             }
             WM_NOTIFY => {
@@ -2796,6 +3462,8 @@ impl Window for MainWindow {
                     self.on_results_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.table {
                     self.on_table_notify(header.code, lparam);
+                } else if header.hwndFrom == self.controls.get().panel.traps {
+                    self.on_traps_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.log {
                     self.on_log_notify(header.code, lparam);
                 } else if header.hwndFrom == self.controls.get().panel.tabs
@@ -2810,7 +3478,10 @@ impl Window for MainWindow {
                 }
                 Some(LRESULT(0))
             }
-            WM_CTLCOLORSTATIC if HWND(lparam.0 as *mut _) == self.controls.get().description => {
+            WM_CTLCOLORSTATIC
+                if HWND(lparam.0 as *mut _) == self.controls.get().description
+                    || HWND(lparam.0 as *mut _) == self.controls.get().panel.trap_bar.state =>
+            {
                 // A read-only edit box is grey by default; the description
                 // reads better on the normal window background.
                 // SAFETY: wparam is the control's device context.
@@ -2824,7 +3495,7 @@ impl Window for MainWindow {
             }
             WM_SETTINGCHANGE => {
                 if theme::is_theme_change(lparam) {
-                    theme::apply_title_bar(hwnd);
+                    self.apply_theme();
                 }
                 None
             }
@@ -2853,6 +3524,18 @@ impl Window for MainWindow {
                 self.on_query_timer();
                 Some(LRESULT(0))
             }
+            WM_APP_TRAPS => {
+                self.on_trap_message();
+                Some(LRESULT(0))
+            }
+            WM_TIMER if wparam.0 == TRAP_TIMER => {
+                self.on_trap_timer();
+                Some(LRESULT(0))
+            }
+            WM_CONTEXTMENU if HWND(wparam.0 as *mut _) == self.controls.get().panel.traps => {
+                self.traps_menu(lparam);
+                Some(LRESULT(0))
+            }
             WM_CONTEXTMENU if HWND(wparam.0 as *mut _) == self.controls.get().panel.results => {
                 self.results_menu(lparam);
                 Some(LRESULT(0))
@@ -2869,8 +3552,10 @@ impl Window for MainWindow {
                 Some(LRESULT(0))
             }
             WM_DESTROY => {
-                // Stop the query and the engine's thread.
+                self.save_layout();
+                // Stop the query, the trap receiver and the engine's thread.
                 self.running.borrow_mut().take();
+                self.trap_feed.borrow_mut().take();
                 let worker = self.worker.borrow_mut().take();
                 drop(worker);
                 // SAFETY: ends the message loop.
@@ -2882,7 +3567,7 @@ impl Window for MainWindow {
     }
 }
 
-/// The menu bar: File, Edit, Query, View and Help.
+/// The menu bar: File, Edit, Query, Traps, View and Help.
 fn menu_bar() -> windows::core::Result<HMENU> {
     // SAFETY: building menus; the strings are copied by AppendMenuW.
     unsafe {
@@ -2924,6 +3609,18 @@ fn menu_bar() -> windows::core::Result<HMENU> {
         add(query, id::CANCEL, "&Cancel\tEsc")?;
         let view = CreatePopupMenu()?;
         add(view, id::RAW, "&Raw values\tCtrl+Shift+R")?;
+        let traps = CreatePopupMenu()?;
+        add(traps, id::LISTEN, "&Start or stop listening\tCtrl+L")?;
+        add(traps, id::TRAP_DETAILS, "Show &details\tEnter")?;
+        AppendMenuW(traps, MF_SEPARATOR, 0, None)?;
+        add(
+            traps,
+            id::EXPORT_TRAPS,
+            "&Export traps as CSV or JSON\u{2026}",
+        )?;
+        add(traps, id::CLEAR_TRAPS, "&Clear traps")?;
+        AppendMenuW(traps, MF_SEPARATOR, 0, None)?;
+        add(traps, id::TRAP_SETTINGS, "Trap se&ttings\u{2026}")?;
         let help = CreatePopupMenu()?;
         add(help, id::ABOUT, "&About FeroSNMP")?;
         let bar = CreateMenu()?;
@@ -2931,6 +3628,7 @@ fn menu_bar() -> windows::core::Result<HMENU> {
             (file, "&File"),
             (edit, "&Edit"),
             (query, "&Query"),
+            (traps, "&Traps"),
             (view, "&View"),
             (help, "&Help"),
         ] {
@@ -3062,6 +3760,35 @@ fn select_all_on_ctrl_a(list: HWND, lparam: LPARAM) {
     if control && key == u16::from(b'A') {
         bottom_panel::select(list, None);
     }
+}
+
+/// A moment in local time as `2026-10-29 14:03:22`, for the Traps list.
+fn local_date_time(at: std::time::SystemTime) -> String {
+    use windows::Win32::Foundation::{FILETIME, SYSTEMTIME};
+    use windows::Win32::System::Time::{FileTimeToSystemTime, SystemTimeToTzSpecificLocalTime};
+    // FILETIME counts 100 ns since 1601; the Unix epoch is 1970.
+    const UNIX_EPOCH_AS_FILETIME: u64 = 116_444_736_000_000_000;
+    let since = at.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    let ticks = UNIX_EPOCH_AS_FILETIME
+        + since.as_secs() * 10_000_000
+        + u64::from(since.subsec_nanos() / 100);
+    let file_time = FILETIME {
+        dwLowDateTime: ticks as u32,
+        dwHighDateTime: (ticks >> 32) as u32,
+    };
+    let (mut utc, mut local) = (SYSTEMTIME::default(), SYSTEMTIME::default());
+    // SAFETY: both calls only read and fill the structures given.
+    let converted = unsafe {
+        FileTimeToSystemTime(&file_time, &mut utc).is_ok()
+            && SystemTimeToTzSpecificLocalTime(None, &utc, &mut local).is_ok()
+    };
+    if !converted {
+        return trap_rx::rfc3339(at);
+    }
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+        local.wYear, local.wMonth, local.wDay, local.wHour, local.wMinute, local.wSecond
+    )
 }
 
 /// The local time as `14:03:22.120`, for the log.

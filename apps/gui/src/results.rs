@@ -224,7 +224,8 @@ pub fn one_line(text: &str) -> String {
     text.replace("\r\n", " ").replace(['\r', '\n', '\t'], " ")
 }
 
-fn csv_field(text: &str) -> String {
+/// A CSV field (RFC 4180), quoted when needed.
+pub fn csv_field(text: &str) -> String {
     if text.contains([',', '"', '\r', '\n']) {
         format!("\"{}\"", text.replace('"', "\"\""))
     } else {

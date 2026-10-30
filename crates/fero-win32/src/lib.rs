@@ -11,9 +11,9 @@
 //! - `dpi` and `font`: per-monitor DPI scaling and the system UI font
 //!   (Segoe UI on Windows 10 and 11) at the right size for each monitor.
 //! - [`splitter`]: the arithmetic of a draggable bar between two panes.
-//! - `theme`: a dark title bar when Windows is set to dark mode.
-//! - `dialog`: modal dialogs built in memory, so no resource compiler is
-//!   needed.
+//! - `theme`: a dark title bar, and dark tree and list views.
+//! - `dialog`: modal dialogs and property sheets built in memory, so no
+//!   resource compiler is needed.
 //! - `shell`: the standard "pick a folder" dialog.
 //! - `clipboard`: putting text on the clipboard.
 //!

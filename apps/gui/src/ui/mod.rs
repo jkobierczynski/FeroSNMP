@@ -6,17 +6,20 @@
 //! - [`tree`]: the MIB tree on the left, filled in as nodes are expanded.
 //! - [`details`]: the properties list and description on the right.
 //! - [`icons`]: the small pictures in the tree, one per kind of node.
-//! - [`settings_dialog`]: the Settings dialog.
+//! - [`settings_dialog`]: the Settings dialog, with the MIBs, Traps and
+//!   Appearance pages.
+//! - [`trap_user_dialog`]: one SNMPv3 trap user, from the Traps page.
 //! - [`agents_dialog`]: the Agents dialog, for saved agents.
 //! - [`set_dialog`]: the Set value dialog.
-//! - [`bottom_panel`]: the Results, Table, Log and Diagnostics tabs along the
-//!   bottom.
+//! - [`bottom_panel`]: the Results, Table, Traps, Log and Diagnostics tabs
+//!   along the bottom.
 //! - [`text_window`]: the source viewer and the "Why this symbol?" report.
 //!
 //! All windows belong to the one UI thread that runs [`run`]. MIBs are loaded
 //! on another thread (see [`crate::loading`]), which posts the result back,
-//! and SNMP queries run on the engine's thread (see [`crate::query`]), which
-//! posts a message whenever results are waiting.
+//! and SNMP queries and the trap receiver run on the engine's thread (see
+//! [`crate::query`]), which posts a message whenever results or traps are
+//! waiting.
 
 mod agents_dialog;
 mod bottom_panel;
@@ -28,6 +31,7 @@ mod set_dialog;
 mod settings_dialog;
 mod text_window;
 mod toolbar;
+mod trap_user_dialog;
 mod tree;
 
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
@@ -55,6 +59,10 @@ pub const WM_APP_LOADED: u32 = WM_APP + 1;
 /// Posted by the SNMP engine's thread when results of a query are waiting.
 /// The `wparam` is the query's number; the window ignores older queries.
 pub const WM_APP_QUERY: u32 = WM_APP + 2;
+
+/// Posted by the SNMP engine's thread when traps are waiting for the Traps
+/// tab.
+pub const WM_APP_TRAPS: u32 = WM_APP + 3;
 
 /// Control and command ids.
 pub mod id {
@@ -88,6 +96,13 @@ pub mod id {
     pub const QUERY_TOOLBAR: u16 = 113;
     /// The Table list.
     pub const TABLE: u16 = 114;
+    /// The Traps list.
+    pub const TRAPS: u16 = 115;
+    /// The filter boxes above the Traps list.
+    pub const TRAP_SOURCE: u16 = 116;
+    pub const TRAP_NOTIFICATION: u16 = 117;
+    pub const TRAP_SEVERITY: u16 = 118;
+    pub const TRAP_TEXT: u16 = 119;
 
     /// Enter, from the dialog keyboard handling (the predefined `IDOK`).
     pub const ENTER: u16 = 1;
@@ -148,6 +163,17 @@ pub mod id {
     pub const CLEAR_RESULTS: u16 = 253;
     /// Context menu of the Table list: forget the table.
     pub const CLEAR_TABLE: u16 = 254;
+    /// Traps > Start or Stop listening (Ctrl+L, also the button above the
+    /// Traps list).
+    pub const LISTEN: u16 = 260;
+    /// Traps > Show details (Enter or a double click in the Traps list).
+    pub const TRAP_DETAILS: u16 = 261;
+    /// Traps > Export (also in the Traps list's context menu).
+    pub const EXPORT_TRAPS: u16 = 262;
+    /// Traps > Clear.
+    pub const CLEAR_TRAPS: u16 = 263;
+    /// Traps > Trap settings: the Settings dialog on its Traps page.
+    pub const TRAP_SETTINGS: u16 = 264;
     /// Help > About.
     pub const ABOUT: u16 = 220;
 }
@@ -199,6 +225,7 @@ fn message_loop(main: HWND) {
         accelerator(FCONTROL, u16::from(b'S'), id::EXPORT_RESULTS),
         accelerator(FCONTROL, u16::from(b'W'), id::WHY),
         accelerator(FCONTROL, u16::from(b'E'), id::EXPORT),
+        accelerator(FCONTROL, u16::from(b'L'), id::LISTEN),
     ];
     // SAFETY: the standard Win32 message loop on the UI thread.
     unsafe {

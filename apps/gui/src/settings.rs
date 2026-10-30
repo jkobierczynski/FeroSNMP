@@ -14,7 +14,29 @@
 //! host = "192.0.2.10"
 //! ```
 //!
-//! See [`crate::targets`] for the fields of a saved agent.
+//! See [`crate::targets`] for the fields of a saved agent, and
+//! [`crate::trap_users`] for the `[[trap-users]]`. The trap receiver and the
+//! look of the window have settings of their own:
+//!
+//! ```toml
+//! trap-port = 162
+//! trap-address = "0.0.0.0"
+//! listen-at-start = false
+//! theme = "system"
+//!
+//! [layout]
+//! x = 120
+//! y = 80
+//! width = 1100
+//! height = 720
+//! maximized = false
+//! tree-width = 380
+//! details-height = 280
+//! bottom-height = 250
+//! tab = "traps"
+//! ```
+//!
+//! The `[layout]` is written when the window closes.
 //!
 //! Settings the file does not mention keep their defaults, so older files keep
 //! working when settings are added.
@@ -27,6 +49,7 @@ use mib_core::{MibLibrary, Strictness};
 use serde::{Deserialize, Serialize};
 
 use crate::targets::SavedTarget;
+use crate::trap_users::SavedTrapUser;
 
 /// Everything the user can set in the Settings dialog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -41,9 +64,102 @@ pub struct Settings {
     /// What was in the Agent box last time: a saved agent's name or an
     /// address.
     pub agent: String,
-    /// The saved agents, in the order the Agent box lists them. Written
-    /// last, because TOML tables must follow the plain values.
+    /// The UDP port the Traps tab listens on.
+    pub trap_port: u16,
+    /// The local address the Traps tab listens on: `0.0.0.0` for every
+    /// IPv4 address, `::` for every IPv6 address.
+    pub trap_address: String,
+    /// Start listening for traps when the window opens.
+    pub listen_at_start: bool,
+    /// Light or dark tree and lists.
+    pub theme: ThemeSetting,
+    /// Where the window and its panes were when it was last closed. TOML
+    /// tables must follow the plain values, so this and the lists below
+    /// come last.
+    pub layout: Option<Layout>,
+    /// The SNMPv3 users traps and INFORMs are accepted from.
+    pub trap_users: Vec<SavedTrapUser>,
+    /// The saved agents, in the order the Agent box lists them.
     pub targets: Vec<SavedTarget>,
+}
+
+/// Light or dark, as written in the settings file.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ThemeSetting {
+    /// Follow "Choose your app mode" in the Windows settings.
+    #[default]
+    System,
+    /// Always light.
+    Light,
+    /// Always dark.
+    Dark,
+}
+
+impl ThemeSetting {
+    /// Every value, in the order shown in the Settings dialog.
+    pub const ALL: [ThemeSetting; 3] = [
+        ThemeSetting::System,
+        ThemeSetting::Light,
+        ThemeSetting::Dark,
+    ];
+
+    /// The name shown in the Settings dialog.
+    pub fn label(self) -> &'static str {
+        match self {
+            ThemeSetting::System => "Same as Windows",
+            ThemeSetting::Light => "Light",
+            ThemeSetting::Dark => "Dark",
+        }
+    }
+
+    /// Whether the tree and lists are dark, given whether Windows is set
+    /// to dark mode.
+    pub fn is_dark(self, windows_dark: bool) -> bool {
+        match self {
+            ThemeSetting::System => windows_dark,
+            ThemeSetting::Light => false,
+            ThemeSetting::Dark => true,
+        }
+    }
+}
+
+/// The window's position and size and the panes' sizes. The window is in
+/// screen pixels (as `GetWindowPlacement` gives it); the panes are at 96
+/// DPI, so they keep their size on a monitor with another scaling.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct Layout {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+    pub maximized: bool,
+    /// Width of the MIB tree.
+    pub tree_width: i32,
+    /// Height of the properties list above the description.
+    pub details_height: i32,
+    /// Height of the tabs along the bottom.
+    pub bottom_height: i32,
+    /// The tab shown along the bottom: `results`, `table`, `traps`, `log`
+    /// or `diagnostics`.
+    pub tab: String,
+}
+
+impl Default for Layout {
+    fn default() -> Self {
+        Layout {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            maximized: false,
+            tree_width: 380,
+            details_height: 280,
+            bottom_height: 250,
+            tab: "results".to_string(),
+        }
+    }
 }
 
 impl Default for Settings {
@@ -53,6 +169,12 @@ impl Default for Settings {
             use_system_folders: true,
             strictness: StrictnessSetting::Permissive,
             agent: String::new(),
+            trap_port: trap_rx::TRAP_PORT,
+            trap_address: "0.0.0.0".to_string(),
+            listen_at_start: false,
+            theme: ThemeSetting::System,
+            layout: None,
+            trap_users: Vec::new(),
             targets: Vec::new(),
         }
     }
@@ -177,6 +299,30 @@ impl Settings {
         std::fs::rename(&temporary, path).map_err(io_error)
     }
 
+    /// The address and port the Traps tab listens on.
+    pub fn trap_listen_address(&self) -> Result<std::net::SocketAddr, String> {
+        let address = self.trap_address.trim();
+        let address = address
+            .strip_prefix('[')
+            .and_then(|a| a.strip_suffix(']'))
+            .unwrap_or(address);
+        let ip: std::net::IpAddr = if address.is_empty() {
+            std::net::Ipv4Addr::UNSPECIFIED.into()
+        } else {
+            address.parse().map_err(|_| {
+                format!(
+                    "The trap address \u{201c}{address}\u{201d} is not an IP address. Use \
+                     0.0.0.0 to listen on every IPv4 address, or one of this computer's \
+                     addresses."
+                )
+            })?
+        };
+        if self.trap_port == 0 {
+            return Err("The trap port must be a number from 1 to 65535.".to_string());
+        }
+        Ok(std::net::SocketAddr::new(ip, self.trap_port))
+    }
+
     /// The MIB library these settings describe, with `extra` folders or
     /// files searched first: the ones dropped on the window, which are kept
     /// for this session only.
@@ -221,6 +367,20 @@ mod tests {
             use_system_folders: false,
             strictness: StrictnessSetting::Strict,
             agent: "lab".into(),
+            trap_port: 1162,
+            trap_address: "127.0.0.1".into(),
+            listen_at_start: true,
+            theme: ThemeSetting::Dark,
+            layout: Some(Layout {
+                x: -1200,
+                maximized: true,
+                tab: "traps".into(),
+                ..Layout::default()
+            }),
+            trap_users: vec![SavedTrapUser {
+                name: "trapper".into(),
+                ..SavedTrapUser::default()
+            }],
             targets: vec![SavedTarget {
                 name: "lab".into(),
                 host: "192.0.2.10".into(),
@@ -232,6 +392,37 @@ mod tests {
         assert!(text.contains("strictness = \"strict\""), "{text}");
         assert_eq!(Settings::load(&path).unwrap(), settings);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn trap_addresses() {
+        let settings = |address: &str, port: u16| Settings {
+            trap_address: address.into(),
+            trap_port: port,
+            ..Settings::default()
+        };
+        assert_eq!(
+            Settings::default().trap_listen_address().unwrap(),
+            "0.0.0.0:162".parse().unwrap()
+        );
+        assert_eq!(
+            settings("", 1162).trap_listen_address().unwrap(),
+            "0.0.0.0:1162".parse().unwrap()
+        );
+        assert_eq!(
+            settings("[::]", 162).trap_listen_address().unwrap(),
+            "[::]:162".parse().unwrap()
+        );
+        assert!(settings("trap.example", 162).trap_listen_address().is_err());
+        assert!(settings("0.0.0.0", 0).trap_listen_address().is_err());
+    }
+
+    #[test]
+    fn themes() {
+        assert!(ThemeSetting::System.is_dark(true));
+        assert!(!ThemeSetting::System.is_dark(false));
+        assert!(ThemeSetting::Dark.is_dark(false));
+        assert!(!ThemeSetting::Light.is_dark(true));
     }
 
     #[test]

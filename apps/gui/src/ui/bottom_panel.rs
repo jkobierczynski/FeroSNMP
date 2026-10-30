@@ -1,9 +1,11 @@
-//! The panel along the bottom of the window: a tab control with four tabs,
+//! The panel along the bottom of the window: a tab control with five tabs,
 //! each holding a virtual list.
 //!
 //! - **Results**: the values of the last query.
 //! - **Table**: the last table walked with Table, as rows and columns. Its
 //!   columns change with the table.
+//! - **Traps**: the traps and INFORMs received, with a row of filters and
+//!   the Start listening button above the list.
 //! - **Log**: every request sent, with timings, and how each query ended.
 //! - **Diagnostics**: every problem found while loading the MIBs.
 //!
@@ -13,6 +15,7 @@
 //! screen when painting, and adding rows is one `LVM_SETITEMCOUNT`.
 
 use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
+use windows::Win32::UI::Controls::EM_SETCUEBANNER;
 use windows::Win32::UI::Controls::{
     LIST_VIEW_ITEM_STATE_FLAGS, LVCF_FMT, LVCF_TEXT, LVCF_WIDTH, LVCFMT_LEFT, LVCFMT_RIGHT,
     LVCOLUMNW, LVIF_STATE, LVIF_TEXT, LVIS_FOCUSED, LVIS_SELECTED, LVITEMW, LVM_DELETECOLUMN,
@@ -25,20 +28,22 @@ use windows::Win32::UI::Controls::{
     TCM_SETITEMW, WC_LISTVIEWW, WC_TABCONTROLW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, HMENU, HWND_TOP, SW_HIDE, SW_SHOW, SWP_NOACTIVATE, SWP_NOCOPYBITS, SWP_NOMOVE,
-    SWP_NOSIZE, SWP_NOZORDER, SendMessageW, SetWindowPos, ShowWindow, WINDOW_EX_STYLE,
-    WINDOW_STYLE, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_CLIENTEDGE, WS_TABSTOP,
+    BS_PUSHBUTTON, CreateWindowExW, ES_AUTOHSCROLL, HMENU, HWND_TOP, SW_HIDE, SW_SHOW,
+    SWP_NOACTIVATE, SWP_NOCOPYBITS, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SendMessageW,
+    SetWindowPos, SetWindowTextW, ShowWindow, WINDOW_EX_STYLE, WINDOW_STYLE, WS_CHILD,
+    WS_CLIPSIBLINGS, WS_EX_CLIENTEDGE, WS_TABSTOP,
 };
-use windows::core::{PWSTR, w};
+use windows::core::{HSTRING, PWSTR, w};
 
 use fero_win32::dpi;
 use fero_win32::splitter::Rect;
-use fero_win32::text::wide;
+use fero_win32::text::{wide, window_text};
 use fero_win32::window::instance;
 
 use crate::diagnostics::{DiagnosticList, Field};
 use crate::oplog::LogColumn;
 use crate::results::Column;
+use crate::traps::{TrapColumn, TrapFilter};
 
 use super::{id, send};
 
@@ -47,17 +52,46 @@ use super::{id, send};
 pub enum Tab {
     Results,
     Table,
+    Traps,
     Log,
     Diagnostics,
 }
 
 impl Tab {
-    const ALL: [Tab; 4] = [Tab::Results, Tab::Table, Tab::Log, Tab::Diagnostics];
+    const ALL: [Tab; 5] = [
+        Tab::Results,
+        Tab::Table,
+        Tab::Traps,
+        Tab::Log,
+        Tab::Diagnostics,
+    ];
 
     fn index(self) -> usize {
         Tab::ALL.iter().position(|&tab| tab == self).unwrap_or(0)
     }
+
+    /// The name in the settings file's `[layout]`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Tab::Results => "results",
+            Tab::Table => "table",
+            Tab::Traps => "traps",
+            Tab::Log => "log",
+            Tab::Diagnostics => "diagnostics",
+        }
+    }
+
+    /// The tab with this [`name`](Self::name).
+    pub fn from_name(name: &str) -> Option<Tab> {
+        Tab::ALL.into_iter().find(|tab| tab.name() == name)
+    }
 }
+
+/// Sizes of the row above the Traps list, at 96 DPI.
+const TRAP_BAR_HEIGHT: i32 = 23;
+const TRAP_BAR_GAP: i32 = 4;
+/// The Start listening button and the four filter boxes, from the left.
+const TRAP_BAR_WIDTHS: [i32; 5] = [110, 140, 170, 100, 170];
 
 /// A list column: heading, width at 96 DPI, right-aligned or not.
 type ColumnSpec = (&'static str, i32, bool);
@@ -72,6 +106,13 @@ fn result_columns(raw: bool) -> Vec<ColumnSpec> {
 /// Width at 96 DPI of a Table column: enough for the heading, within limits.
 fn table_column_width(title: &str) -> i32 {
     (title.chars().count() as i32 * 7 + 24).clamp(90, 220)
+}
+
+fn trap_columns() -> Vec<ColumnSpec> {
+    TrapColumn::ALL
+        .iter()
+        .map(|c| (c.title(), c.width(), false))
+        .collect()
 }
 
 fn log_columns() -> Vec<ColumnSpec> {
@@ -94,8 +135,71 @@ pub struct BottomPanel {
     pub tabs: HWND,
     pub results: HWND,
     pub table: HWND,
+    pub traps: HWND,
     pub log: HWND,
     pub diagnostics: HWND,
+    /// The row above the Traps list.
+    pub trap_bar: TrapBar,
+    dpi: u32,
+}
+
+/// The Start listening button, the filter boxes, and a line saying where
+/// the receiver listens, above the Traps list.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TrapBar {
+    pub listen: HWND,
+    pub source: HWND,
+    pub notification: HWND,
+    pub severity: HWND,
+    pub text: HWND,
+    pub state: HWND,
+}
+
+impl TrapBar {
+    /// Every control, from the left.
+    pub fn controls(&self) -> [HWND; 6] {
+        [
+            self.listen,
+            self.source,
+            self.notification,
+            self.severity,
+            self.text,
+            self.state,
+        ]
+    }
+
+    /// True if `id` is one of the filter boxes.
+    pub fn is_filter(id: u16) -> bool {
+        matches!(
+            id,
+            id::TRAP_SOURCE | id::TRAP_NOTIFICATION | id::TRAP_SEVERITY | id::TRAP_TEXT
+        )
+    }
+
+    /// What the filter boxes say.
+    pub fn filter(&self) -> TrapFilter {
+        TrapFilter {
+            source: window_text(self.source),
+            notification: window_text(self.notification),
+            severity: window_text(self.severity),
+            text: window_text(self.text),
+        }
+    }
+
+    /// Show Start or Stop listening on the button, and where the receiver
+    /// listens next to the boxes.
+    pub fn set_listening(&self, listening: bool, state: &str) {
+        let label = if listening {
+            "Stop listening"
+        } else {
+            "Start listening"
+        };
+        // SAFETY: setting the text of our own controls.
+        unsafe {
+            let _ = SetWindowTextW(self.listen, &HSTRING::from(label));
+            let _ = SetWindowTextW(self.state, &HSTRING::from(state));
+        }
+    }
 }
 
 impl BottomPanel {
@@ -137,8 +241,43 @@ impl BottomPanel {
         };
         let results = list(id::RESULTS, false)?;
         let table = list(id::TABLE, false)?;
+        let traps = list(id::TRAPS, false)?;
         let log = list(id::LOG, false)?;
         let diagnostics = list(id::DIAGNOSTICS, true)?;
+        let filter_box = |id: u16, cue: &str| -> windows::core::Result<HWND> {
+            let edit = child(
+                w!("EDIT"),
+                WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                WS_EX_CLIENTEDGE,
+                id,
+            )?;
+            let cue = HSTRING::from(cue);
+            // SAFETY: the cue text lives until the call returns; the box
+            // copies it. wparam 1: show it also while the box has the focus.
+            unsafe {
+                SendMessageW(
+                    edit,
+                    EM_SETCUEBANNER,
+                    Some(WPARAM(1)),
+                    Some(LPARAM(cue.as_ptr() as isize)),
+                );
+            }
+            Ok(edit)
+        };
+        let trap_bar = TrapBar {
+            listen: child(
+                w!("BUTTON"),
+                WS_TABSTOP | WINDOW_STYLE(BS_PUSHBUTTON as u32),
+                WINDOW_EX_STYLE(0),
+                id::LISTEN,
+            )?,
+            source: filter_box(id::TRAP_SOURCE, "From (address)")?,
+            notification: filter_box(id::TRAP_NOTIFICATION, "Notification, such as link*")?,
+            severity: filter_box(id::TRAP_SEVERITY, "Severity")?,
+            text: filter_box(id::TRAP_TEXT, "Any text")?,
+            state: child(w!("STATIC"), WINDOW_STYLE(0), WINDOW_EX_STYLE(0), 0)?,
+        };
+        trap_bar.set_listening(false, "Not listening");
         let tabs = child(
             WC_TABCONTROLW,
             WS_CLIPSIBLINGS,
@@ -149,7 +288,7 @@ impl BottomPanel {
         // returns.
         unsafe {
             let _ = ShowWindow(tabs, SW_SHOW);
-            for list in [results, table, log, diagnostics] {
+            for list in [results, table, traps, log, diagnostics] {
                 // Keep the lists above the tab control; the tab control clips
                 // itself against them (WS_CLIPSIBLINGS), so it never paints
                 // over them.
@@ -171,7 +310,7 @@ impl BottomPanel {
                     extended as isize,
                 );
             }
-            for (index, title) in ["Results", "Table", "Log", "Diagnostics"]
+            for (index, title) in ["Results", "Table", "Traps", "Log", "Diagnostics"]
                 .into_iter()
                 .enumerate()
             {
@@ -193,23 +332,46 @@ impl BottomPanel {
             tabs,
             results,
             table,
+            traps,
             log,
             diagnostics,
+            trap_bar,
+            dpi,
         };
         add_columns(results, &result_columns(false), dpi);
+        add_columns(traps, &trap_columns(), dpi);
         add_columns(log, &log_columns(), dpi);
         add_columns(diagnostics, &diagnostic_columns(), dpi);
         panel.select_tab(Tab::Results);
         Ok(panel)
     }
 
-    fn lists(&self) -> [(Tab, HWND); 4] {
+    fn lists(&self) -> [(Tab, HWND); 5] {
         [
             (Tab::Results, self.results),
             (Tab::Table, self.table),
+            (Tab::Traps, self.traps),
             (Tab::Log, self.log),
             (Tab::Diagnostics, self.diagnostics),
         ]
+    }
+
+    /// Every list, for the dark mode.
+    pub fn all_lists(&self) -> [HWND; 5] {
+        self.lists().map(|(_, list)| list)
+    }
+
+    /// Every control of the panel, for the font.
+    pub fn controls(&self) -> Vec<HWND> {
+        let mut controls = vec![self.tabs];
+        controls.extend(self.all_lists());
+        controls.extend(self.trap_bar.controls());
+        controls
+    }
+
+    /// Use the sizes for a new DPI from the next [`place`](Self::place) on.
+    pub fn set_dpi(&mut self, dpi: u32) {
+        self.dpi = dpi;
     }
 
     /// The tab shown.
@@ -230,6 +392,9 @@ impl BottomPanel {
             send(self.tabs, TCM_SETCURSEL, tab.index(), 0);
             for (list_tab, list) in self.lists() {
                 let _ = ShowWindow(list, if list_tab == tab { SW_SHOW } else { SW_HIDE });
+            }
+            for control in self.trap_bar.controls() {
+                let _ = ShowWindow(control, if tab == Tab::Traps { SW_SHOW } else { SW_HIDE });
             }
         }
     }
@@ -282,6 +447,7 @@ impl BottomPanel {
         }
         for (list, columns) in [
             (self.results, result_columns(false)),
+            (self.traps, trap_columns()),
             (self.log, log_columns()),
             (self.diagnostics, diagnostic_columns()),
         ] {
@@ -354,9 +520,51 @@ impl BottomPanel {
             right: page.right.max(page.left),
             bottom: page.bottom.max(page.top),
         };
-        for (_, list) in self.lists() {
-            place(list, page);
+        for (tab, list) in self.lists() {
+            if tab != Tab::Traps {
+                place(list, page);
+            }
         }
+        // The Traps tab: the row of filters, then the list.
+        let scale = |size| dpi::scale(size, self.dpi);
+        let gap = scale(TRAP_BAR_GAP);
+        let bar_bottom = (page.top + gap + scale(TRAP_BAR_HEIGHT)).min(page.bottom);
+        let mut left = page.left;
+        for (control, width) in self.trap_bar.controls().into_iter().zip(TRAP_BAR_WIDTHS) {
+            let right = (left + scale(width)).min(page.right);
+            place(
+                control,
+                Rect {
+                    left,
+                    top: page.top + gap,
+                    right,
+                    bottom: bar_bottom,
+                },
+            );
+            left = (right + gap).min(page.right);
+        }
+        // The line saying where the receiver listens takes the rest; a
+        // static control's text sits at its top, so it is moved down to the
+        // middle of the boxes.
+        let text_top = page.top + gap + scale(4);
+        place(
+            self.trap_bar.state,
+            Rect {
+                left,
+                top: text_top.min(bar_bottom),
+                right: page.right.max(left),
+                bottom: bar_bottom,
+            },
+        );
+        place(
+            self.traps,
+            Rect {
+                left: page.left,
+                top: (bar_bottom + gap).min(page.bottom),
+                right: page.right,
+                bottom: page.bottom,
+            },
+        );
     }
 
     /// Set a tab's title, such as `Results (1,234)`.

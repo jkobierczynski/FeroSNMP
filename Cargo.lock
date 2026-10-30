@@ -359,6 +359,7 @@ dependencies = [
  "snmp-core",
  "tokio",
  "toml",
+ "trap-rx",
  "windows",
 ]
 
